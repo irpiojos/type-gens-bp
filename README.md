@@ -18,6 +18,46 @@ system evolves.
 
 ---
 
+## Current prototype
+
+The repository now includes a first runnable p5.js draft:
+
+```text
+index.html
+src/
+  sketch.js
+  styles.css
+```
+
+The sketch uses:
+
+- p5.js from a CDN,
+- lil-gui from a CDN,
+- an offscreen `p5.Graphics` text buffer,
+- staged pixel sampling,
+- seeded jitter and dropout,
+- word-stagger reveal,
+- live controls for text, timeline, reveal behavior, and per-stage pixelation.
+
+### Run locally
+
+Because browser security rules can restrict local file loading, serve the folder
+through a local HTTP server:
+
+```sh
+python3 -m http.server 8000
+```
+
+Then open:
+
+```text
+http://localhost:8000
+```
+
+No build step is required for the current prototype.
+
+---
+
 ## 1. Reference behavior
 
 The provided frame sequence shows a typographic "focus pull":

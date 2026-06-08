@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixel Type Reveal Prototype</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="intro-panel" aria-labelledby="page-title">
+        <p class="eyebrow">type-gens-bp / draft 01</p>
+        <h1 id="page-title">Pixel type reveal</h1>
+        <p>
+          A p5.js prototype for staging text from large block fragments into
+          crisp, full-resolution typography. Use the controls to tune text,
+          duration, reveal behavior, and per-stage pixelation.
+        </p>
+      </section>
+
+      <section class="canvas-panel" aria-label="Animation canvas">
+        <div id="sketch-root"></div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.20/dist/lil-gui.umd.min.js"></script>
+    <script src="src/sketch.js"></script>
+  </body>
+</html>
