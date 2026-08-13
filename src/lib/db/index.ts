@@ -1,18 +1,20 @@
-import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle as drizzlePg } from "drizzle-orm/postgres-js";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
+import postgres from "postgres";
 import { PGlite } from "@electric-sql/pglite";
 import * as schema from "./schema";
 import { mkdirSync } from "fs";
 import { join } from "path";
 
 type Db =
-  | ReturnType<typeof drizzleNeon<typeof schema>>
+  | ReturnType<typeof drizzlePg<typeof schema>>
   | ReturnType<typeof drizzlePglite<typeof schema>>;
 
 declare global {
   // eslint-disable-next-line no-var
   var __ttmDb: Db | undefined;
+  // eslint-disable-next-line no-var
+  var __ttmSql: ReturnType<typeof postgres> | undefined;
   // eslint-disable-next-line no-var
   var __ttmPglite: PGlite | undefined;
   // eslint-disable-next-line no-var
@@ -123,8 +125,13 @@ CREATE TABLE IF NOT EXISTS dated_comments (
 function createDb(): Db {
   const databaseUrl = process.env.DATABASE_URL;
   if (databaseUrl) {
-    const sql = neon(databaseUrl);
-    return drizzleNeon(sql, { schema });
+    if (!global.__ttmSql) {
+      global.__ttmSql = postgres(databaseUrl, {
+        prepare: false, // required for Supabase transaction pooler
+        max: 1,
+      });
+    }
+    return drizzlePg(global.__ttmSql, { schema });
   }
 
   const dataDir = join(process.cwd(), ".data");
@@ -150,7 +157,6 @@ export async function ensureDbReady() {
       if (!process.env.DATABASE_URL && global.__ttmPglite) {
         await global.__ttmPglite.exec(DDL);
       }
-      // When DATABASE_URL is set (Neon), run `npm run db:push` once to apply schema.
     })();
   }
   await global.__ttmDbReady;
