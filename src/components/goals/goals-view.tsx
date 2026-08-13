@@ -64,6 +64,29 @@ export function GoalsView({ data, week }: { data: Data; week: number }) {
         />
       </div>
 
+      {data.years.length > 1 ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-ink/50">Years</span>
+          {data.years.map((y) => (
+            <button
+              key={y.id}
+              type="button"
+              className={
+                y.yearNumber === data.year.yearNumber
+                  ? "btn-nav text-xs is-selected"
+                  : "btn-nav text-xs"
+              }
+              onClick={() => {
+                if (y.yearNumber === data.year.yearNumber) return;
+                router.push(`/goals?year=${y.yearNumber}`);
+              }}
+            >
+              {y.yearNumber}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <section className="mt-8 grid gap-4 sm:grid-cols-2">
         {data.goals.map((g) => {
           const st = statusMap[g.status] ?? GOAL_STATUSES[0];

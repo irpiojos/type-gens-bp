@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { bootstrapApp } from "@/lib/db/bootstrap";
-import { getDb, schema } from "@/lib/db";
+import { getDb, schema, withDbRetry } from "@/lib/db";
 import { createSession, verifyPassword } from "@/lib/auth/session";
 import { AUTH_USERNAME } from "@/lib/constants";
 
@@ -14,9 +14,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    await bootstrapApp();
-    const db = getDb();
-    const rows = await db.select().from(schema.settings).limit(1);
+    const rows = await withDbRetry(async () => {
+      await bootstrapApp();
+      const db = getDb();
+      return db.select().from(schema.settings).limit(1);
+    });
     const settings = rows[0];
     if (!settings) {
       return NextResponse.json({ error: "App not initialized" }, { status: 500 });

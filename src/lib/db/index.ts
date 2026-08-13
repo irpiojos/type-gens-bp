@@ -122,14 +122,55 @@ CREATE TABLE IF NOT EXISTS dated_comments (
 );
 `;
 
+function isConnectionError(err: unknown): boolean {
+  const msg = err instanceof Error ? `${err.message}\n${err.cause ?? ""}` : String(err);
+  return /CONNECTION_CLOSED|CONNECTION_ENDED|ECONNRESET|ECONNREFUSED|ETIMEDOUT|connect_timeout|DB_QUERY_TIMEOUT|sorry, too many clients|Connection terminated|fetch failed|57P01|57P03|08006|08003/i.test(
+    msg,
+  );
+}
+
+async function endSqlQuietly(sql?: ReturnType<typeof postgres>) {
+  if (!sql) return;
+  try {
+    await sql.end({ timeout: 1 });
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Drop a dead pooled client so the next getDb() opens a fresh connection. */
+export function resetDbClient() {
+  const prev = global.__ttmSql;
+  global.__ttmSql = undefined;
+  global.__ttmDb = undefined;
+  global.__ttmDbReady = undefined;
+  void endSqlQuietly(prev);
+}
+
+function createPostgresClient(databaseUrl: string) {
+  // Supabase transaction pooler (6543) drops idle connections; keep max low,
+  // disable prepared statements, and bound lifetimes so we don't hang on a
+  // half-closed socket inside a serverless isolate.
+  return postgres(databaseUrl, {
+    prepare: false,
+    max: 1,
+    idle_timeout: 20,
+    max_lifetime: 60 * 5,
+    connect_timeout: 10,
+    // Startup params; cast needed — postgres.js types mark values as number|boolean
+    // but Postgres GUC statement_timeout accepts ms as text/number.
+    connection: {
+      application_name: "team-tasks-manager",
+      statement_timeout: 15000,
+    } as Record<string, string | number>,
+  });
+}
+
 function createDb(): Db {
   const databaseUrl = process.env.DATABASE_URL;
   if (databaseUrl) {
     if (!global.__ttmSql) {
-      global.__ttmSql = postgres(databaseUrl, {
-        prepare: false, // required for Supabase transaction pooler
-        max: 1,
-      });
+      global.__ttmSql = createPostgresClient(databaseUrl);
     }
     return drizzlePg(global.__ttmSql, { schema });
   }
@@ -150,6 +191,32 @@ export function getDb(): Db {
   return global.__ttmDb;
 }
 
+/**
+ * Run a DB operation; on pooler/connection death, recreate the client once and retry.
+ * Prevents blank infinite-loading pages after CONNECTION_CLOSED on Supabase pooler.
+ * A wall-clock timeout covers the case where max:1 holds a dead socket and never rejects.
+ */
+export async function withDbRetry<T>(op: () => Promise<T>): Promise<T> {
+  const runOnce = () =>
+    Promise.race([
+      op(),
+      new Promise<never>((_, reject) => {
+        const t = setTimeout(() => reject(new Error("DB_QUERY_TIMEOUT")), 20_000);
+        // Avoid keeping the isolate alive solely for this timer if op finishes.
+        if (typeof t === "object" && "unref" in t) (t as NodeJS.Timeout).unref?.();
+      }),
+    ]);
+
+  try {
+    return await runOnce();
+  } catch (err) {
+    if (!process.env.DATABASE_URL || !isConnectionError(err)) throw err;
+    resetDbClient();
+    await ensureDbReady();
+    return await runOnce();
+  }
+}
+
 export async function ensureDbReady() {
   if (!global.__ttmDbReady) {
     global.__ttmDbReady = (async () => {
@@ -159,7 +226,12 @@ export async function ensureDbReady() {
       }
     })();
   }
-  await global.__ttmDbReady;
+  try {
+    await global.__ttmDbReady;
+  } catch (err) {
+    global.__ttmDbReady = undefined;
+    throw err;
+  }
 }
 
-export { schema };
+export { schema, isConnectionError };

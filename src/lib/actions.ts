@@ -2,7 +2,7 @@
 
 import { and, eq, isNull, sql, inArray, or, gte, lte, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { getDb, schema, ensureDbReady } from "@/lib/db";
+import { getDb, schema, ensureDbReady, withDbRetry } from "@/lib/db";
 import { bootstrapApp, getActiveYear } from "@/lib/db/bootstrap";
 import { requireSession, verifyPassword, hashPassword } from "@/lib/auth/session";
 import { goalLetter } from "@/lib/constants";
@@ -10,8 +10,10 @@ import { todayISO } from "@/lib/dates";
 
 async function dbReady() {
   await requireSession();
-  await bootstrapApp();
-  return getDb();
+  return withDbRetry(async () => {
+    await bootstrapApp();
+    return getDb();
+  });
 }
 
 function revalidateAll() {
