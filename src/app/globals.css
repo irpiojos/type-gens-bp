@@ -2,7 +2,7 @@
 
 @font-face {
   font-family: "Lettera";
-  src: url("/fonts/LetteraStd-Light.otf") format("opentype");
+  src: url("/fonts/LetteraTextLL-Light.otf") format("opentype");
   font-weight: 300;
   font-style: normal;
   font-display: swap;
@@ -10,7 +10,15 @@
 
 @font-face {
   font-family: "Lettera";
-  src: url("/fonts/LetteraStd-Bold.otf") format("opentype");
+  src: url("/fonts/LetteraTextLL-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lettera";
+  src: url("/fonts/LetteraTextLL-Medium.ttf") format("truetype");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -65,7 +73,7 @@ strong,
 b,
 .font-semibold,
 .font-medium {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .page-shell {
@@ -99,7 +107,7 @@ b,
   border-color: rgba(0, 0, 0, 0.45);
 }
 
-/* Hard offset shadow — bottom by default, top when selected */
+/* Hard offset shadow — bottom by default */
 .btn-outline,
 .btn-nav,
 .btn-warn,
@@ -110,8 +118,9 @@ b,
   padding: 0.45rem 0.85rem;
   font-size: 0.875rem;
   font-weight: 300;
-  box-shadow: 2px 2px 0 var(--shadow);
-  transition: box-shadow 0.1s ease, transform 0.1s ease, background 0.1s ease;
+  box-shadow: 0 2px 0 var(--shadow);
+  transition: box-shadow 0.1s ease, transform 0.1s ease, background 0.1s ease, color 0.1s ease,
+    border-color 0.1s ease;
 }
 
 .btn-outline:hover,
@@ -123,16 +132,18 @@ b,
 .btn-outline:active,
 .btn-nav:active,
 .icon-btn:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 var(--shadow);
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--shadow);
 }
 
 .btn-nav.is-selected,
 .btn-outline.is-selected {
-  background: #d4d4d4;
-  font-weight: 700;
-  box-shadow: 2px -2px 0 var(--shadow);
-  transform: translateY(2px);
+  box-shadow: 0 -2px #d4d4d4;
+  background: #ffffff;
+  border-color: #d4d4d4;
+  color: #d4d4d4;
+  font-weight: 500;
+  transform: none;
 }
 
 .btn-outline:disabled,
@@ -157,7 +168,7 @@ b,
   border: 1.5px solid rgba(0, 0, 0, 0.15);
   background: white;
   padding: 1rem 1.1rem 1.1rem;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
 }
 
 .goal-card:hover {
@@ -190,7 +201,7 @@ b,
   border: 1.5px solid rgba(0, 0, 0, 0.15);
   background: white;
   padding: 1rem 0.75rem 1.25rem;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
 }
 
 @media (min-width: 640px) {
@@ -210,7 +221,7 @@ b,
   padding: 0.35rem 0.45rem;
   font-size: 0.75rem;
   font-weight: 300;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
 }
 
 .task-chip:hover {

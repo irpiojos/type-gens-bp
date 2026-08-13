@@ -1,9 +1,7 @@
 # Brand fonts (private use)
 
-Place these files here (exact names):
+- BentonModDisp-Semibold.otf — display / titles
+- LetteraTextLL-Light.otf — body
+- LetteraTextLL-Medium.ttf — emphasis / details
 
-- BentonModDisp-Semibold.otf
-- LetteraStd-Light.otf
-- LetteraStd-Bold.otf
-
-They are loaded via `@font-face` in `src/app/globals.css`.
+Loaded via `@font-face` in `src/app/globals.css`.

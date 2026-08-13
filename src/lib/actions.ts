@@ -4,7 +4,7 @@ import { and, eq, isNull, sql, inArray, or, gte, lte, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb, schema, ensureDbReady } from "@/lib/db";
 import { bootstrapApp, getActiveYear } from "@/lib/db/bootstrap";
-import { requireSession } from "@/lib/auth/session";
+import { requireSession, verifyPassword, hashPassword } from "@/lib/auth/session";
 import { goalLetter } from "@/lib/constants";
 import { todayISO } from "@/lib/dates";
 
@@ -485,22 +485,28 @@ export async function restoreDatedComment(id: string) {
   revalidateAll();
 }
 
-export async function changePassword(currentPassword: string, newPassword: string) {
-  const db = await dbReady();
-  if (!newPassword || newPassword.length < 6) {
-    throw new Error("New password must be at least 6 characters");
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const db = await dbReady();
+    if (!newPassword || newPassword.length < 6) {
+      return { ok: false, error: "New password must be at least 6 characters" };
+    }
+    const rows = await db.select().from(schema.settings).limit(1);
+    const settings = rows[0];
+    if (!settings) return { ok: false, error: "Settings not found" };
+    const ok = await verifyPassword(currentPassword, settings.passwordHash);
+    if (!ok) return { ok: false, error: "Current password is incorrect" };
+    await db
+      .update(schema.settings)
+      .set({ passwordHash: await hashPassword(newPassword), updatedAt: new Date() })
+      .where(eq(schema.settings.id, settings.id));
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not update password" };
   }
-  const { verifyPassword, hashPassword } = await import("@/lib/auth/session");
-  const rows = await db.select().from(schema.settings).limit(1);
-  const settings = rows[0];
-  if (!settings) throw new Error("Settings not found");
-  const ok = await verifyPassword(currentPassword, settings.passwordHash);
-  if (!ok) throw new Error("Current password is incorrect");
-  await db
-    .update(schema.settings)
-    .set({ passwordHash: await hashPassword(newPassword), updatedAt: new Date() })
-    .where(eq(schema.settings.id, settings.id));
-  return { ok: true as const };
 }
 
 export async function softDeleteEntity(

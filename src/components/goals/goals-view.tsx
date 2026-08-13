@@ -194,7 +194,7 @@ export function GoalsView({ data, week }: { data: Data; week: number }) {
 
       <button
         type="button"
-        className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl border border-black/15 bg-white py-6 font-display text-3xl shadow-[2px_2px_0_#1a1a1a] hover:bg-black/[0.02]"
+        className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl border border-black/15 bg-white py-6 font-display text-3xl shadow-[0_2px_0_#1a1a1a] hover:bg-black/[0.02]"
         onClick={() =>
           start(async () => {
             const y = await addYear(data.year.id);

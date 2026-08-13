@@ -16,6 +16,7 @@ export async function middleware(request: NextRequest) {
     pathname.endsWith(".svg") ||
     pathname.endsWith(".png") ||
     pathname.endsWith(".otf") ||
+    pathname.endsWith(".ttf") ||
     pathname.endsWith(".woff") ||
     pathname.endsWith(".woff2")
   ) {

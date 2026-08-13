@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { AppNav } from "@/components/layout/app-nav";
+import { AppNav, MetaStack } from "@/components/layout/app-nav";
 import { TaskChip } from "@/components/task/task-chip";
 import { TaskModal, type TaskModalPrefill } from "@/components/task/task-modal";
 import { MemberAvatar } from "@/components/ui/member-avatar";
@@ -117,7 +117,7 @@ export function WeekView({ data }: { data: Data }) {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="font-display text-5xl tracking-tight sm:text-6xl">W{data.week}</h1>
-          <div className="flex flex-col overflow-hidden rounded-full border border-black/20 bg-white">
+          <div className="flex flex-col overflow-hidden rounded-full border border-black/20 bg-white shadow-[0_2px_0_#1a1a1a]">
             <button
               type="button"
               className="px-2 py-1 hover:bg-black/5"
@@ -136,7 +136,7 @@ export function WeekView({ data }: { data: Data }) {
             </button>
           </div>
         </div>
-        <p className="text-xs text-ink/55 sm:hidden">{meta.label}</p>
+        <MetaStack year={meta.year} quarter={meta.quarter} season={meta.season} />
       </div>
 
       <section className="week-panel relative">

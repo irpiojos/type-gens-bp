@@ -8,6 +8,7 @@ export function ChangePasswordForm() {
   const [currentPassword, setCurrent] = useState("");
   const [newPassword, setNew] = useState("");
   const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
   const [pending, start] = useTransition();
 
   if (!open) {
@@ -20,20 +21,20 @@ export function ChangePasswordForm() {
 
   return (
     <form
-      className="mt-2 max-w-sm space-y-2 rounded-xl border border-black/15 bg-white p-3 shadow-[2px_2px_0_#1a1a1a]"
+      className="mt-2 max-w-sm space-y-2 rounded-xl border border-black/15 bg-white p-3 shadow-[0_2px_0_#1a1a1a]"
       onSubmit={(e) => {
         e.preventDefault();
         setMsg("");
+        setErr("");
         start(async () => {
-          try {
-            await changePassword(currentPassword, newPassword);
-            setMsg("Password updated.");
-            setCurrent("");
-            setNew("");
-            setOpen(false);
-          } catch (err) {
-            setMsg(err instanceof Error ? err.message : "Could not update");
+          const res = await changePassword(currentPassword, newPassword);
+          if (!res.ok) {
+            setErr(res.error);
+            return;
           }
+          setMsg("Password updated.");
+          setCurrent("");
+          setNew("");
         });
       }}
     >
@@ -44,6 +45,7 @@ export function ChangePasswordForm() {
         placeholder="Current password"
         value={currentPassword}
         onChange={(e) => setCurrent(e.target.value)}
+        autoComplete="current-password"
         required
       />
       <input
@@ -52,13 +54,15 @@ export function ChangePasswordForm() {
         placeholder="New password (min 6)"
         value={newPassword}
         onChange={(e) => setNew(e.target.value)}
+        autoComplete="new-password"
         required
         minLength={6}
       />
+      {err ? <p className="text-xs text-red-600">{err}</p> : null}
       {msg ? <p className="text-xs text-ink/60">{msg}</p> : null}
       <div className="flex gap-2">
         <button type="submit" className="btn-outline text-xs" disabled={pending}>
-          Save
+          {pending ? "Saving…" : "Save"}
         </button>
         <button type="button" className="text-xs underline" onClick={() => setOpen(false)}>
           Cancel
