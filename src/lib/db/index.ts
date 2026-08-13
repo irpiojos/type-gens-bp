@@ -157,12 +157,6 @@ function createPostgresClient(databaseUrl: string) {
     idle_timeout: 20,
     max_lifetime: 60 * 5,
     connect_timeout: 10,
-    // Startup params; cast needed — postgres.js types mark values as number|boolean
-    // but Postgres GUC statement_timeout accepts ms as text/number.
-    connection: {
-      application_name: "team-tasks-manager",
-      statement_timeout: 15000,
-    } as Record<string, string | number>,
   });
 }
 
