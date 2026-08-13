@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { AppNav } from "@/components/layout/app-nav";
+import { AppNav, MetaStack } from "@/components/layout/app-nav";
 import { TaskChip } from "@/components/task/task-chip";
 import {
   allISOWeeksInYear,
   contextMeta,
   currentISOWeek,
+  currentYearNumber,
   formatDayHeader,
+  isNewCalendarQuarter,
   quarterAndSeason,
   toISODate,
   weekWorkdays,
@@ -22,7 +24,7 @@ export function YearView({ data }: { data: Data }) {
   const router = useRouter();
   const weeks = useMemo(() => allISOWeeksInYear(data.year.yearNumber), [data.year.yearNumber]);
   const current = currentISOWeek();
-  const scroller = useRef<HTMLDivElement>(null);
+  const meta = contextMeta(data.year.yearNumber, current);
 
   useEffect(() => {
     const el = document.getElementById(`week-row-${current}`);
@@ -36,39 +38,43 @@ export function YearView({ data }: { data: Data }) {
   }
 
   return (
-    <div className="page-shell relative" ref={scroller}>
-      <AppNav
-        yearNumber={data.year.yearNumber}
-        week={current}
-        theme={data.year.theme}
-        yearId={data.year.id}
-      />
-
-      <div className="mb-6 flex items-end justify-between">
-        <h1 className="font-display text-5xl tracking-tight sm:text-6xl">
-          {data.year.yearNumber}
-        </h1>
-        <p className="text-xs text-ink/55">{contextMeta(data.year.yearNumber, current).label}</p>
+    <div className="page-shell">
+      <div className="sticky-year-header">
+        <AppNav
+          yearNumber={data.year.yearNumber}
+          week={current}
+          theme={data.year.theme}
+          yearId={data.year.id}
+        />
+        <div className="flex items-end justify-between gap-4">
+          <h1 className="font-display text-5xl tracking-tight sm:text-6xl">
+            {data.year.yearNumber}
+          </h1>
+          <MetaStack year={meta.year} quarter={meta.quarter} season={meta.season} />
+        </div>
       </div>
 
       <div className="space-y-6">
-        {weeks.map((w) => {
+        {weeks.map((w, idx) => {
           const days = weekWorkdays(data.year.yearNumber, w);
           const q = quarterAndSeason(days[0]);
-          const isQuarterStart = [1, 14, 27, 40].includes(w);
+          const prev = idx > 0 ? weeks[idx - 1] : null;
+          const showQuarter = isNewCalendarQuarter(data.year.yearNumber, w, prev);
+          const isCurrent = w === current && data.year.yearNumber === currentYearNumber();
           return (
             <div key={w} id={`week-row-${w}`}>
-              {isQuarterStart ? (
+              {showQuarter ? (
                 <p className="mb-2 text-center text-xs tracking-widest text-ink/40">
                   — {q.quarter} - {q.season} —
                 </p>
               ) : null}
               <div
                 className={clsx(
-                  "rounded-xl border border-black/10 bg-white/70 p-2 transition hover:border-black/40",
+                  "rounded-xl border border-black/15 bg-white p-2 transition hover:border-black/50",
+                  isCurrent && "week-row-current",
                 )}
               >
-                <div className="mb-1 text-xs font-medium text-ink/50">W{w}</div>
+                <div className="mb-1 text-xs font-bold text-ink/50">W{w}</div>
                 <div className="grid grid-cols-5 gap-1.5 overflow-x-auto">
                   {days.map((d) => {
                     const iso = toISODate(d);

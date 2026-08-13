@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
 const COOKIE = "ttm_session";
-const PUBLIC = ["/login", "/api/auth/login", "/api/auth/forgot"];
+const PUBLIC = ["/login", "/api/auth/login", "/api/auth/logout", "/api/auth/forgot"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -11,9 +11,13 @@ export async function middleware(request: NextRequest) {
     PUBLIC.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/avatars") ||
+    pathname.startsWith("/fonts") ||
     pathname === "/favicon.ico" ||
     pathname.endsWith(".svg") ||
-    pathname.endsWith(".png")
+    pathname.endsWith(".png") ||
+    pathname.endsWith(".otf") ||
+    pathname.endsWith(".woff") ||
+    pathname.endsWith(".woff2")
   ) {
     return NextResponse.next();
   }

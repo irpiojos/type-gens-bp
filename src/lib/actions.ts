@@ -331,7 +331,6 @@ export async function upsertTask(input: {
 }) {
   const db = await dbReady();
   if (!input.title.trim()) throw new Error("Title required");
-  if (!input.assigneeIds.length) throw new Error("At least one assignee required");
   if (!input.unscheduled && (!input.startDate || !input.endDate)) {
     throw new Error("Dates required");
   }
@@ -357,9 +356,11 @@ export async function upsertTask(input: {
     taskId = t.id;
   }
 
-  await db.insert(schema.taskAssignees).values(
-    input.assigneeIds.map((memberId) => ({ taskId: taskId!, memberId })),
-  );
+  if (input.assigneeIds.length) {
+    await db.insert(schema.taskAssignees).values(
+      input.assigneeIds.map((memberId) => ({ taskId: taskId!, memberId })),
+    );
+  }
 
   revalidateAll();
   return taskId!;
@@ -482,6 +483,24 @@ export async function restoreDatedComment(id: string) {
     .set({ deletedAt: null })
     .where(eq(schema.datedComments.id, id));
   revalidateAll();
+}
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const db = await dbReady();
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error("New password must be at least 6 characters");
+  }
+  const { verifyPassword, hashPassword } = await import("@/lib/auth/session");
+  const rows = await db.select().from(schema.settings).limit(1);
+  const settings = rows[0];
+  if (!settings) throw new Error("Settings not found");
+  const ok = await verifyPassword(currentPassword, settings.passwordHash);
+  if (!ok) throw new Error("Current password is incorrect");
+  await db
+    .update(schema.settings)
+    .set({ passwordHash: await hashPassword(newPassword), updatedAt: new Date() })
+    .where(eq(schema.settings.id, settings.id));
+  return { ok: true as const };
 }
 
 export async function softDeleteEntity(

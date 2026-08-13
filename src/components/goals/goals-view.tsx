@@ -12,12 +12,16 @@ import { formatMonthDay, currentISOWeek } from "@/lib/dates";
 import type { getGoalsPageData } from "@/lib/queries";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ChangePasswordForm } from "@/components/auth/change-password-form";
+import { MetaStack } from "@/components/layout/app-nav";
+import { contextMeta } from "@/lib/dates";
 
 type Data = NonNullable<Awaited<ReturnType<typeof getGoalsPageData>>>;
 
 export function GoalsView({ data, week }: { data: Data; week: number }) {
   const router = useRouter();
   const [theme, setTheme] = useState(data.year.theme);
+  const meta = contextMeta(data.year.yearNumber, week || currentISOWeek());
   const [goalOpen, setGoalOpen] = useState(false);
   const [memberOpen, setMemberOpen] = useState(false);
   const [holidayOpen, setHolidayOpen] = useState(false);
@@ -42,7 +46,10 @@ export function GoalsView({ data, week }: { data: Data; week: number }) {
         yearId={data.year.id}
       />
 
-      <h1 className="font-display text-5xl tracking-tight text-ink sm:text-6xl">Goals</h1>
+      <div className="flex items-end justify-between gap-4">
+        <h1 className="font-display text-5xl tracking-tight text-ink sm:text-6xl">Goals</h1>
+        <MetaStack year={meta.year} quarter={meta.quarter} season={meta.season} />
+      </div>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <span className="shrink-0 text-sm text-ink/70">
@@ -187,7 +194,7 @@ export function GoalsView({ data, week }: { data: Data; week: number }) {
 
       <button
         type="button"
-        className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl border border-black/15 bg-white py-6 font-display text-3xl hover:bg-black/[0.02]"
+        className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl border border-black/15 bg-white py-6 font-display text-3xl shadow-[2px_2px_0_#1a1a1a] hover:bg-black/[0.02]"
         onClick={() =>
           start(async () => {
             const y = await addYear(data.year.id);
@@ -197,6 +204,15 @@ export function GoalsView({ data, week }: { data: Data; week: number }) {
       >
         <Plus size={28} /> {nextYear}
       </button>
+
+      <footer className="mt-10 space-y-3 border-t border-black/10 pt-4 text-sm text-ink/60">
+        <ChangePasswordForm />
+        <div>
+          <a href="/api/auth/logout" className="underline-offset-2 hover:underline">
+            Logout
+          </a>
+        </div>
+      </footer>
 
       <GoalModal
         open={goalOpen}

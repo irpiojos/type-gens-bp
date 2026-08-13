@@ -64,6 +64,7 @@ export function parseDate(iso: string): Date {
   return parseISO(iso);
 }
 
+/** Calendar quarters (not fiscal): Q1 Jan–Mar Winter, Q2 Apr–Jun Spring, Q3 Jul–Sep Summer, Q4 Oct–Dec Fall */
 export function quarterAndSeason(date: Date): { quarter: string; season: string } {
   const m = getMonth(date) + 1;
   if (m <= 3) return { quarter: "Q1", season: "Winter" };
@@ -76,6 +77,18 @@ export function contextMeta(year: number, week: number) {
   const start = weekStart(year, week);
   const { quarter, season } = quarterAndSeason(start);
   return { year, quarter, season, label: `${year} / ${quarter} / ${season}` };
+}
+
+/** True when this week starts a new calendar quarter vs the previous week in the list */
+export function isNewCalendarQuarter(
+  year: number,
+  week: number,
+  prevWeek: number | null,
+): boolean {
+  const q = quarterAndSeason(weekStart(year, week)).quarter;
+  if (prevWeek == null) return true;
+  const prevQ = quarterAndSeason(weekStart(year, prevWeek)).quarter;
+  return q !== prevQ;
 }
 
 export function datesOverlap(
@@ -132,4 +145,4 @@ export function addWeekClamped(week: number, delta: number): number {
   return clampWeek(week + delta);
 }
 
-export { differenceInCalendarWeeks, addDays, addWeeks, format, getMonth, parseISO };
+export { differenceInCalendarWeeks, addDays, addWeeks, format, getMonth, parseISO, isWeekend };

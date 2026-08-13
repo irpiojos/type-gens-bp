@@ -1,8 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import { AppNav } from "@/components/layout/app-nav";
 import { TaskChip } from "@/components/task/task-chip";
 import { TaskModal, type TaskModalPrefill } from "@/components/task/task-modal";
@@ -18,6 +16,7 @@ import {
 } from "@/lib/dates";
 import type { getWeekPageData } from "@/lib/queries";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 type Data = NonNullable<Awaited<ReturnType<typeof getWeekPageData>>>;
 
@@ -343,9 +342,9 @@ export function WeekView({ data }: { data: Data }) {
       </section>
 
       <footer className="mt-12 flex items-center justify-between border-t border-black/10 pt-4 text-xs text-ink/50">
-        <Link href="/login?logout=1" className="underline-offset-2 hover:underline">
+        <a href="/api/auth/logout" className="underline-offset-2 hover:underline">
           Account / Logout
-        </Link>
+        </a>
         <span>Team Tasks Manager · v01</span>
       </footer>
 

@@ -1,19 +1,6 @@
 import type { Metadata } from "next";
-import { Fraunces, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
-
-const display = Fraunces({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
-const body = Source_Sans_3({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   title: "Team Tasks Manager",
@@ -22,8 +9,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} h-full antialiased`}>
-      <body className="min-h-full text-ink">
+    <html lang="en" className="h-full antialiased">
+      <body className="min-h-full text-ink">{/* fonts via @font-face in globals.css */}
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
