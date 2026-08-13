@@ -12,12 +12,14 @@ export function TaskChip({
   compact,
   className,
   style,
+  spanning,
 }: {
   task: TaskWithRelations;
   onClick?: () => void;
   compact?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  spanning?: boolean;
 }) {
   const letter = task.goal?.letterCode ?? "?";
   const emoji = statusEmoji(task.status);
@@ -50,13 +52,17 @@ export function TaskChip({
             style={style}
             className={clsx(
               "task-chip text-left",
-              compact && "text-[11px] py-1 px-1.5",
+              compact && "task-chip-compact",
+              spanning && "task-chip-spanning",
               className,
             )}
           >
-            <span className="shrink-0">{emoji}</span>
-            <span className="font-semibold">{letter} -</span>
-            <span className="truncate">{task.title}</span>
+            <span className="task-chip-prefix">
+              {emoji ? <span className="task-chip-emoji">{emoji}</span> : null}
+              <span className="task-chip-letter">{letter}</span>
+              <span className="task-chip-dash"> – </span>
+            </span>
+            <span className="task-chip-title">{task.title}</span>
           </button>
         </Tooltip.Trigger>
         <Tooltip.Portal>

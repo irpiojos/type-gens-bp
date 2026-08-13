@@ -30,7 +30,7 @@ export function AppNav({
               {yearNumber} The Year Of{" "}
               <Link
                 href={`/goals?year=${yearNumber}`}
-                className="font-bold text-ink underline decoration-ink/40 underline-offset-4 hover:decoration-ink"
+                className="font-light text-ink underline decoration-ink/40 underline-offset-4 hover:decoration-ink"
               >
                 {theme || "…"}
               </Link>

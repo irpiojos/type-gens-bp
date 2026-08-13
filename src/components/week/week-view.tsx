@@ -10,6 +10,7 @@ import {
   addWeekClamped,
   contextMeta,
   formatDayHeader,
+  formatMonthDay,
   toISODate,
   todayISO,
   weekWorkdays,
@@ -117,21 +118,11 @@ export function WeekView({ data }: { data: Data }) {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="font-display text-5xl tracking-tight sm:text-6xl">W{data.week}</h1>
-          <div className="flex flex-col overflow-hidden rounded-full border border-black/20 bg-white shadow-[0_2px_0_#1a1a1a]">
-            <button
-              type="button"
-              className="px-2 py-1 hover:bg-black/5"
-              aria-label="Previous week"
-              onClick={() => goWeek(-1)}
-            >
+          <div className="week-nav-toggle">
+            <button type="button" aria-label="Previous week" onClick={() => goWeek(-1)}>
               <ChevronUp size={14} />
             </button>
-            <button
-              type="button"
-              className="px-2 py-1 hover:bg-black/5"
-              aria-label="Next week"
-              onClick={() => goWeek(1)}
-            >
+            <button type="button" aria-label="Next week" onClick={() => goWeek(1)}>
               <ChevronDown size={14} />
             </button>
           </div>
@@ -139,36 +130,33 @@ export function WeekView({ data }: { data: Data }) {
         <MetaStack year={meta.year} quarter={meta.quarter} season={meta.season} />
       </div>
 
-      <section className="week-panel relative">
-        <div className="absolute right-2 top-2 z-10 flex flex-col gap-1">
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Toggle previous week"
-            onClick={() => toggleAdjacent("prev")}
-          >
-            <ChevronUp size={14} />
-          </button>
-        </div>
-        <div className="absolute bottom-2 right-2 z-10">
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Toggle next week"
-            onClick={() => toggleAdjacent("next")}
-          >
-            <ChevronDown size={14} />
-          </button>
-        </div>
+      <section className="week-panel">
+        <button
+          type="button"
+          className="week-panel-edge-btn top"
+          aria-label="Toggle previous week"
+          onClick={() => toggleAdjacent("prev")}
+        >
+          <ChevronUp size={14} />
+        </button>
+        <button
+          type="button"
+          className="week-panel-edge-btn bottom"
+          aria-label="Toggle next week"
+          onClick={() => toggleAdjacent("next")}
+        >
+          <ChevronDown size={14} />
+        </button>
 
         {weekBlocks.map((block) => (
           <div key={block.week} className="mb-4 last:mb-0">
             {block.week !== data.week ? (
-              <p className="mb-2 text-sm font-medium text-ink/50">
+              <p className="mb-2 text-sm text-ink/50">
                 W{block.week} — {formatDayHeader(block.days[0])}
               </p>
             ) : null}
-            <div className="grid grid-flow-col auto-cols-[minmax(140px,1fr)] gap-2 overflow-x-auto pb-2 sm:auto-cols-fr sm:grid-cols-5">
+
+            <div className="week-days-grid overflow-x-auto">
               {block.days.map((day) => {
                 const iso = toISODate(day);
                 const dayTasks = tasksForDay(iso).filter((t) => t.startDate === t.endDate);
@@ -177,7 +165,7 @@ export function WeekView({ data }: { data: Data }) {
                 return (
                   <div
                     key={iso}
-                    className="min-h-[140px] select-none"
+                    className="week-day-col"
                     onMouseEnter={() => {
                       setHoverDay(iso);
                       moveSelect(iso);
@@ -186,7 +174,10 @@ export function WeekView({ data }: { data: Data }) {
                     onMouseDown={() => beginSelect(iso, block.week)}
                     onMouseUp={endSelect}
                     onTouchStart={() => {
-                      longPress.current = window.setTimeout(() => beginSelect(iso, block.week), 400);
+                      longPress.current = window.setTimeout(
+                        () => beginSelect(iso, block.week),
+                        400,
+                      );
                     }}
                     onTouchMove={(e) => {
                       if (!drag.current) return;
@@ -203,9 +194,7 @@ export function WeekView({ data }: { data: Data }) {
                     }}
                     data-day={iso}
                   >
-                    <div className="mb-2 text-sm font-medium text-ink/70">
-                      {formatDayHeader(day)}
-                    </div>
+                    <div className="mb-2 text-sm text-ink/70">{formatDayHeader(day)}</div>
                     <div className="space-y-1.5">
                       {dayTasks.map((t) => (
                         <div
@@ -217,15 +206,16 @@ export function WeekView({ data }: { data: Data }) {
                         </div>
                       ))}
                       {inDrag ? (
-                        <div className="rounded-md bg-[#bfe9f7] px-2 py-2 text-xs text-ink/70">
-                          + Task: {dragRange!.start === dragRange!.end
-                            ? formatDayHeader(day)
-                            : `${dragRange!.start} – ${dragRange!.end}`}
+                        <div className="border-r-8 border-[#7ec8e3] bg-[#bfe9f7] px-2 py-1.5 text-xs text-ink/70">
+                          + Task
+                          {dragRange!.start !== dragRange!.end
+                            ? `: ${formatMonthDay(dragRange!.start)} – ${formatMonthDay(dragRange!.end)}`
+                            : ""}
                         </div>
                       ) : hoverDay === iso && !dragRange ? (
                         <button
                           type="button"
-                          className="w-full rounded-md bg-[#d9f1fa]/80 px-2 py-2 text-xs text-ink/60"
+                          className="w-full bg-[#d9f1fa]/80 px-2 py-1.5 text-xs text-ink/60"
                           onClick={(e) => {
                             e.stopPropagation();
                             openNew({ startDate: iso, endDate: iso });
@@ -239,7 +229,8 @@ export function WeekView({ data }: { data: Data }) {
                 );
               })}
             </div>
-            {/* multi-day bars */}
+
+            {/* continuous multi-day bars */}
             <div className="mt-2 space-y-1">
               {spanningTasks(block.week).map((t) => {
                 const days = block.days;
@@ -250,18 +241,13 @@ export function WeekView({ data }: { data: Data }) {
                 const start = idxs[0].i;
                 const span = idxs.length;
                 return (
-                  <div
-                    key={t.id}
-                    className="grid grid-cols-5 gap-2"
-                  >
+                  <div key={t.id} className="week-days-grid">
                     <div
                       style={{ gridColumn: `${start + 1} / span ${span}` }}
-                      className="hidden sm:block"
+                      className="min-w-0 px-1"
+                      onMouseDown={(e) => e.stopPropagation()}
                     >
-                      <TaskChip task={t} onClick={() => openEdit(t)} />
-                    </div>
-                    <div className="col-span-full sm:hidden">
-                      <TaskChip task={t} onClick={() => openEdit(t)} />
+                      <TaskChip spanning task={t} onClick={() => openEdit(t)} />
                     </div>
                   </div>
                 );
@@ -272,15 +258,15 @@ export function WeekView({ data }: { data: Data }) {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-lg font-medium">2 Word Check In / Tasks</h2>
-        <div className="flex gap-4 overflow-x-auto rounded-2xl border border-black/10 bg-[#f0f0f0]/60 p-4">
+        <h2 className="mb-3 text-lg font-light">2 Word Check In / Tasks</h2>
+        <div className="checkin-panel">
           {data.members.map((m) => {
             const ci = data.checkIns.find((c) => c.memberId === m.id);
             const memberTasks = data.weekTasks.filter((t) =>
               t.assignees.some((a) => a.id === m.id),
             );
             return (
-              <div key={m.id} className="w-[160px] shrink-0 sm:w-[180px]">
+              <div key={m.id} className="checkin-col">
                 <div className="flex flex-col items-center">
                   <MemberAvatar name={m.name} avatarUrl={m.avatarUrl} size={64} />
                   <CheckInWords
@@ -305,7 +291,7 @@ export function WeekView({ data }: { data: Data }) {
                   ))}
                   <button
                     type="button"
-                    className="w-full rounded-md px-2 py-2 text-xs text-ink/40 opacity-0 hover:opacity-100 hover:bg-[#d9f1fa]/80"
+                    className="w-full px-2 py-2 text-xs text-ink/40 opacity-0 hover:bg-[#d9f1fa]/80 hover:opacity-100"
                     onClick={() =>
                       openNew({
                         startDate: todayISO(),
@@ -326,14 +312,14 @@ export function WeekView({ data }: { data: Data }) {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-lg font-medium">Unscheduled tasks</h2>
+        <h2 className="mb-3 text-lg font-light">Unscheduled tasks</h2>
         <div className="grid gap-2 sm:grid-cols-3">
           {data.unscheduled.map((t) => (
             <TaskChip key={t.id} task={t} onClick={() => openEdit(t)} />
           ))}
           <button
             type="button"
-            className="rounded-lg border border-dashed border-black/15 px-3 py-3 text-sm text-ink/40 hover:bg-[#d9f1fa]/50 hover:text-ink/70"
+            className="border border-dashed border-black/15 px-3 py-3 text-sm text-ink/40 hover:bg-[#d9f1fa]/50 hover:text-ink/70"
             onClick={() => openNew({ unscheduled: true })}
           >
             + Task
@@ -378,17 +364,14 @@ function CheckInWords({
     setB(word2);
   }, [word1, word2]);
   return (
-    <div className="mt-1 flex items-center gap-1 text-sm">
+    <div className="checkin-words">
       <input
-        className="w-[58px] border-b border-ink/30 bg-transparent text-center outline-none"
         value={a}
         placeholder="…"
         onChange={(e) => setA(e.target.value)}
         onBlur={() => onSave(a, b)}
       />
-      <span>/</span>
       <input
-        className="w-[58px] border-b border-ink/30 bg-transparent text-center outline-none"
         value={b}
         placeholder="…"
         onChange={(e) => setB(e.target.value)}
