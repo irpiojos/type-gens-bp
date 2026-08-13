@@ -197,8 +197,13 @@ export function GoalsView({ data, week }: { data: Data; week: number }) {
         className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl border border-black/15 bg-white py-6 font-display text-3xl shadow-[0_2px_0_#1a1a1a] hover:bg-black/[0.02]"
         onClick={() =>
           start(async () => {
-            const y = await addYear(data.year.id);
-            router.push(`/goals?year=${y.yearNumber}`);
+            const res = await addYear(data.year.id);
+            if (!res.ok) {
+              window.alert(res.error);
+              return;
+            }
+            router.push(`/goals?year=${res.year.yearNumber}`);
+            router.refresh();
           })
         }
       >

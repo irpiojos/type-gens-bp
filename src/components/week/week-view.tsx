@@ -206,7 +206,7 @@ export function WeekView({ data }: { data: Data }) {
                         </div>
                       ))}
                       {inDrag ? (
-                        <div className="border-r-8 border-[#7ec8e3] bg-[#bfe9f7] px-2 py-1.5 text-xs text-ink/70">
+                        <div className="border-r-4 border-[#7ec8e3] bg-[#bfe9f7] px-2 py-1.5 text-xs text-ink/70">
                           + Task
                           {dragRange!.start !== dragRange!.end
                             ? `: ${formatMonthDay(dragRange!.start)} – ${formatMonthDay(dragRange!.end)}`

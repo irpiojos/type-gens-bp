@@ -11,9 +11,11 @@ import {
   allISOWeeksInYear,
   contextMeta,
   currentISOWeek,
+  currentYearNumber,
   format,
   getMonth,
   toISODate,
+  todayISO,
   weekStart,
   addDays,
   isWeekend,
@@ -31,6 +33,7 @@ export function YearScrollView({ data }: { data: Data }) {
   const { undoableDelete } = useToast();
   const weeks = useMemo(() => allISOWeeksInYear(data.year.yearNumber), [data.year.yearNumber]);
   const current = currentISOWeek();
+  const today = todayISO();
   const meta = contextMeta(data.year.yearNumber, current);
   const [commentOpen, setCommentOpen] = useState(false);
   const [editing, setEditing] = useState<DatedComment | null>(null);
@@ -89,13 +92,17 @@ export function YearScrollView({ data }: { data: Data }) {
 
   function renderWeek(w: number) {
     const days = weekDays(w);
+    const isCurrentWeek =
+      w === current && data.year.yearNumber === currentYearNumber();
     return (
-      <div key={w} id={`yscroll-w${w}`} className="min-w-0">
-        <div className="flex">
-          <div className="yscroll-weeknum w-7 shrink-0 self-stretch border border-black/10 text-[10px]">
-            W{w}
-          </div>
-          <div className="grid flex-1 grid-cols-7 border border-l-0 border-black/10">
+      <div
+        key={w}
+        id={`yscroll-w${w}`}
+        className={clsx("yscroll-week", isCurrentWeek && "yscroll-week-current")}
+      >
+        <div className="yscroll-week-row">
+          <div className="yscroll-weeknum w-7 shrink-0 self-stretch">W{w}</div>
+          <div className="yscroll-days">
             {days.map((d) => {
               const iso = toISODate(d);
               const month = getMonth(d) + 1;
@@ -106,6 +113,8 @@ export function YearScrollView({ data }: { data: Data }) {
               const comments = commentsOn(iso);
               const isMonthStart = d.getDate() === 1;
               const greyed = weekend || (!!hol && !hol.isHalfDay);
+              const isToday =
+                iso === today && data.year.yearNumber === currentYearNumber();
               const inHover =
                 hoverRange && iso >= hoverRange.start && iso <= hoverRange.end;
               return (
@@ -113,9 +122,10 @@ export function YearScrollView({ data }: { data: Data }) {
                   key={iso}
                   data-day={iso}
                   className={clsx(
-                    "relative min-h-[52px] border border-black/5 p-0.5 text-[10px]",
+                    "yscroll-day",
                     greyed && "yscroll-weekend",
-                    inHover && "ring-1 ring-blue-400",
+                    isToday && "yscroll-day-current",
+                    inHover && "ring-1 ring-inset ring-blue-400",
                   )}
                   style={{ backgroundColor: greyed ? undefined : bg }}
                   onMouseDown={() => {
@@ -165,31 +175,32 @@ export function YearScrollView({ data }: { data: Data }) {
                       {count}
                     </button>
                   ) : null}
-                  {comments.map((c) =>
-                    c.startDate === iso ? (
+                  {comments.map((c) => {
+                    const isStart = c.startDate === iso;
+                    const isEnd = c.endDate === iso;
+                    return (
                       <button
                         key={c.id}
                         type="button"
                         data-comment
-                        className="relative z-10 mt-0.5 w-full truncate rounded-sm px-0.5 text-left text-[9px] font-bold"
+                        className={clsx(
+                          "yscroll-comment",
+                          isStart && "yscroll-comment-start",
+                          !isStart && !isEnd && "yscroll-comment-mid",
+                          isEnd && "yscroll-comment-end",
+                        )}
                         style={{ backgroundColor: c.color }}
                         onClick={(e) => {
                           e.stopPropagation();
                           openComment(undefined, c);
                         }}
                       >
-                        {c.text || "+ comment"}
+                        {isStart ? c.text || "+ comment" : "\u00A0"}
                       </button>
-                    ) : c.startDate < iso && c.endDate >= iso ? (
-                      <div
-                        key={c.id}
-                        className="mt-0.5 h-3 rounded-sm"
-                        style={{ backgroundColor: c.color }}
-                      />
-                    ) : null,
-                  )}
+                    );
+                  })}
                   {inHover && hoverRange?.start === iso ? (
-                    <div className="mt-0.5 rounded-sm bg-[#bfdbfe] px-0.5 text-[9px]">
+                    <div className="yscroll-comment yscroll-comment-start yscroll-comment-end bg-[#bfdbfe]">
                       + New Dated Comment
                     </div>
                   ) : null}
@@ -219,10 +230,12 @@ export function YearScrollView({ data }: { data: Data }) {
         </div>
       </div>
 
-      {/* Day letters once at top — mirrored for two columns on desktop */}
-      <div className="mb-1 grid gap-2 lg:grid-cols-2">
+      <div className="yscroll-day-headers text-[10px] text-ink/45">
         {[0, 1].map((col) => (
-          <div key={col} className={clsx("flex text-[10px] text-ink/45", col === 1 && "hidden lg:flex")}>
+          <div
+            key={col}
+            className={clsx("flex", col === 1 && "hidden lg:flex")}
+          >
             <span className="w-7 shrink-0" />
             <div className="grid flex-1 grid-cols-7">
               {DAY_LETTERS.map((l, i) => (
@@ -235,10 +248,11 @@ export function YearScrollView({ data }: { data: Data }) {
         ))}
       </div>
 
-      <div className="space-y-1">
+      <div className="yscroll-grid">
         {pairs.map((pair) => (
-          <div key={pair.join("-")} className="grid gap-2 lg:grid-cols-2">
+          <div key={pair.join("-")} className="yscroll-pair">
             {pair.map((w) => renderWeek(w))}
+            {pair.length === 1 ? <div className="hidden lg:block" /> : null}
           </div>
         ))}
       </div>

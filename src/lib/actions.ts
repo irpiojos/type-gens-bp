@@ -29,51 +29,77 @@ export async function updateYearTheme(yearId: string, theme: string) {
   revalidateAll();
 }
 
-export async function addYear(fromYearId: string) {
-  const db = await dbReady();
-  const [from] = await db
-    .select()
-    .from(schema.years)
-    .where(eq(schema.years.id, fromYearId))
-    .limit(1);
-  if (!from) throw new Error("Year not found");
-
-  const nextNum = from.yearNumber + 1;
-  const existing = await db
-    .select()
-    .from(schema.years)
-    .where(eq(schema.years.yearNumber, nextNum))
-    .limit(1);
-  if (existing.length) throw new Error(`Year ${nextNum} already exists`);
-
-  const [created] = await db
-    .insert(schema.years)
-    .values({ yearNumber: nextNum, theme: "" })
-    .returning();
-
-  // copy active members linked to previous year (or all active members)
-  const prevMembers = await db
-    .select()
-    .from(schema.yearMembers)
-    .where(eq(schema.yearMembers.yearId, fromYearId));
-
-  let memberIds = prevMembers.map((m) => m.memberId);
-  if (memberIds.length === 0) {
-    const active = await db
+export async function addYear(
+  fromYearId: string,
+): Promise<{ ok: true; year: typeof schema.years.$inferSelect } | { ok: false; error: string }> {
+  try {
+    const db = await dbReady();
+    const [from] = await db
       .select()
-      .from(schema.members)
-      .where(and(eq(schema.members.active, true), isNull(schema.members.deletedAt)));
-    memberIds = active.map((m) => m.id);
-  }
+      .from(schema.years)
+      .where(eq(schema.years.id, fromYearId))
+      .limit(1);
+    if (!from) return { ok: false, error: "Year not found" };
 
-  if (memberIds.length) {
-    await db.insert(schema.yearMembers).values(
-      memberIds.map((memberId) => ({ yearId: created.id, memberId })),
-    );
-  }
+    const nextNum = from.yearNumber + 1;
+    const existing = await db
+      .select()
+      .from(schema.years)
+      .where(eq(schema.years.yearNumber, nextNum))
+      .limit(1);
 
-  revalidateAll();
-  return created;
+    let year = existing[0];
+    if (year?.deletedAt) {
+      const [restored] = await db
+        .update(schema.years)
+        .set({ deletedAt: null, theme: year.theme || "" })
+        .where(eq(schema.years.id, year.id))
+        .returning();
+      year = restored;
+    } else if (!year) {
+      const [created] = await db
+        .insert(schema.years)
+        .values({ yearNumber: nextNum, theme: "" })
+        .returning();
+      year = created;
+    }
+
+    // ensure members from previous year (or all active) are linked
+    const prevMembers = await db
+      .select()
+      .from(schema.yearMembers)
+      .where(eq(schema.yearMembers.yearId, fromYearId));
+
+    let memberIds = prevMembers.map((m) => m.memberId);
+    if (memberIds.length === 0) {
+      const active = await db
+        .select()
+        .from(schema.members)
+        .where(and(eq(schema.members.active, true), isNull(schema.members.deletedAt)));
+      memberIds = active.map((m) => m.id);
+    }
+
+    for (const memberId of memberIds) {
+      const link = await db
+        .select()
+        .from(schema.yearMembers)
+        .where(
+          and(
+            eq(schema.yearMembers.yearId, year.id),
+            eq(schema.yearMembers.memberId, memberId),
+          ),
+        )
+        .limit(1);
+      if (!link.length) {
+        await db.insert(schema.yearMembers).values({ yearId: year.id, memberId });
+      }
+    }
+
+    revalidateAll();
+    return { ok: true, year };
+  } catch {
+    return { ok: false, error: "Could not add year" };
+  }
 }
 
 /* ---------------- Members ---------------- */
