@@ -91,6 +91,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   start_date date,
   end_date date,
   unscheduled boolean NOT NULL DEFAULT false,
+  done_date date,
+  output_url text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   deleted_at timestamptz

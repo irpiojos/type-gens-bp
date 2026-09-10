@@ -301,6 +301,49 @@ b,
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
 }
 
+.task-chip-wrap {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
+}
+
+.task-chip-wrap .task-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.task-chip-wrap-spanning {
+  width: 100%;
+}
+
+.task-chip-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-left: none;
+  border-right: 4px solid #d4d4d4;
+  background: white;
+  color: #1a1a1a;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+}
+
+.task-chip-link:hover {
+  background: #f6f9f4;
+  border-color: rgba(0, 0, 0, 0.35);
+  border-right-color: #bdbdbd;
+}
+
+.task-chip-wrap:has(.task-chip-link) .task-chip {
+  border-right-width: 1px;
+  border-right-color: rgba(0, 0, 0, 0.12);
+}
+
 .task-chip:hover {
   border-color: rgba(0, 0, 0, 0.35);
   border-right-color: #bdbdbd;
