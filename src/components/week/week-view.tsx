@@ -56,9 +56,17 @@ export function WeekView({ data }: { data: Data }) {
   }
 
   function tasksForDay(iso: string) {
-    return data.weekTasks.filter(
-      (t) => !t.unscheduled && t.startDate && t.endDate && t.startDate <= iso && t.endDate >= iso,
-    );
+    return data.weekTasks
+      .filter(
+        (t) => !t.unscheduled && t.startDate && t.endDate && t.startDate <= iso && t.endDate >= iso,
+      )
+      .sort(ranaFirst);
+  }
+
+  function ranaFirst<T extends { status: string | null }>(a: T, b: T) {
+    const ar = a.status === "rana" ? 0 : 1;
+    const br = b.status === "rana" ? 0 : 1;
+    return ar - br;
   }
 
   function spanningTasks(week: number) {
@@ -294,13 +302,36 @@ export function WeekView({ data }: { data: Data }) {
         <div className="checkin-panel">
           {data.members.map((m) => {
             const ci = data.checkIns.find((c) => c.memberId === m.id);
-            const memberTasks = data.weekTasks.filter((t) =>
-              t.assignees.some((a) => a.id === m.id),
-            );
+            const memberTasks = data.weekTasks
+              .filter((t) => t.assignees.some((a) => a.id === m.id))
+              .sort(ranaFirst);
+            const driveOn = !!ci?.driveScreenshot;
             return (
               <div key={m.id} className="checkin-col">
-                <div className="flex flex-col items-center">
+                <div className="relative flex flex-col items-center">
                   <MemberAvatar name={m.name} avatarUrl={m.avatarUrl} size={64} />
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={driveOn}
+                    title="Drive status screenshot taken"
+                    aria-label="Drive status screenshot taken"
+                    className={clsx("drive-shot-toggle", driveOn && "is-on")}
+                    onClick={() =>
+                      startTx(() =>
+                        saveCheckIn({
+                          yearId: data.year.id,
+                          weekNumber: data.week,
+                          memberId: m.id,
+                          word1: ci?.word1 ?? "",
+                          word2: ci?.word2 ?? "",
+                          driveScreenshot: !driveOn,
+                        }),
+                      )
+                    }
+                  >
+                    <span className="drive-shot-knob" aria-hidden />
+                  </button>
                   <CheckInWords
                     word1={ci?.word1 ?? ""}
                     word2={ci?.word2 ?? ""}
@@ -312,6 +343,7 @@ export function WeekView({ data }: { data: Data }) {
                           memberId: m.id,
                           word1,
                           word2,
+                          driveScreenshot: driveOn,
                         }),
                       )
                     }

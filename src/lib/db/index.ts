@@ -109,7 +109,8 @@ CREATE TABLE IF NOT EXISTS check_ins (
   week_number integer NOT NULL,
   member_id uuid NOT NULL REFERENCES members(id) ON DELETE CASCADE,
   word1 text NOT NULL DEFAULT '',
-  word2 text NOT NULL DEFAULT ''
+  word2 text NOT NULL DEFAULT '',
+  drive_screenshot boolean NOT NULL DEFAULT false
 );
 CREATE UNIQUE INDEX IF NOT EXISTS check_in_unique ON check_ins(year_id, week_number, member_id);
 CREATE TABLE IF NOT EXISTS dated_comments (

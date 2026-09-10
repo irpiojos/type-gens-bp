@@ -134,6 +134,7 @@ export const checkIns = pgTable(
       .references(() => members.id, { onDelete: "cascade" }),
     word1: text("word1").notNull().default(""),
     word2: text("word2").notNull().default(""),
+    driveScreenshot: boolean("drive_screenshot").notNull().default(false),
   },
   (t) => [uniqueIndex("check_in_unique").on(t.yearId, t.weekNumber, t.memberId)],
 );
