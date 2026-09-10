@@ -486,6 +486,52 @@ b,
   font-weight: 300;
 }
 
+/* Drive screenshot compliance toggle — upper-right of avatar block */
+.drive-shot-toggle {
+  position: absolute;
+  top: -2px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  width: 1.85rem;
+  height: 1.05rem;
+  padding: 0 2px;
+  border: 1px solid #d4d4d4;
+  border-radius: 4px;
+  background: #f6f9f4;
+  box-shadow: 0 2px 0 0 #d4d4d4;
+  cursor: pointer;
+}
+
+.drive-shot-toggle .drive-shot-knob {
+  display: block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1px solid #1a1a1a;
+  border-radius: 2px;
+  background: #ffffff;
+  box-shadow: 0 1px 0 0 #1a1a1a;
+  transform: translateX(0);
+  transition: transform 120ms ease;
+}
+
+.drive-shot-toggle.is-on {
+  border-color: #1a1a1a;
+  background: #ffffff;
+  box-shadow: 0 -2px 0 0 #d4d4d4;
+}
+
+.drive-shot-toggle.is-on .drive-shot-knob {
+  background: #1a1a1a;
+  transform: translateX(0.7rem);
+  box-shadow: none;
+}
+
+.drive-shot-toggle:hover {
+  border-color: #1a1a1a;
+}
+
 .sticky-year-header {
   position: sticky;
   top: 0;

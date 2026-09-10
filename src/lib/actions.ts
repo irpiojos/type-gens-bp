@@ -458,8 +458,9 @@ export async function saveCheckIn(input: {
   yearId: string;
   weekNumber: number;
   memberId: string;
-  word1: string;
-  word2: string;
+  word1?: string;
+  word2?: string;
+  driveScreenshot?: boolean;
 }) {
   const db = await dbReady();
   const existing = await db
@@ -475,12 +476,27 @@ export async function saveCheckIn(input: {
     .limit(1);
 
   if (existing[0]) {
+    const patch: {
+      word1?: string;
+      word2?: string;
+      driveScreenshot?: boolean;
+    } = {};
+    if (input.word1 !== undefined) patch.word1 = input.word1;
+    if (input.word2 !== undefined) patch.word2 = input.word2;
+    if (input.driveScreenshot !== undefined) patch.driveScreenshot = input.driveScreenshot;
     await db
       .update(schema.checkIns)
-      .set({ word1: input.word1, word2: input.word2 })
+      .set(patch)
       .where(eq(schema.checkIns.id, existing[0].id));
   } else {
-    await db.insert(schema.checkIns).values(input);
+    await db.insert(schema.checkIns).values({
+      yearId: input.yearId,
+      weekNumber: input.weekNumber,
+      memberId: input.memberId,
+      word1: input.word1 ?? "",
+      word2: input.word2 ?? "",
+      driveScreenshot: input.driveScreenshot ?? false,
+    });
   }
   revalidateAll();
 }
