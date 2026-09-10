@@ -7,6 +7,7 @@ import { bootstrapApp, getActiveYear } from "@/lib/db/bootstrap";
 import { requireSession, verifyPassword, hashPassword } from "@/lib/auth/session";
 import { goalLetter } from "@/lib/constants";
 import { todayISO } from "@/lib/dates";
+import { normalizeOutputUrl } from "@/lib/url";
 
 async function dbReady() {
   await requireSession();
@@ -355,12 +356,21 @@ export async function upsertTask(input: {
   startDate?: string | null;
   endDate?: string | null;
   unscheduled?: boolean;
+  doneDate?: string | null;
+  outputUrl?: string | null;
   assigneeIds: string[];
 }) {
   const db = await dbReady();
   if (!input.title.trim()) throw new Error("Title required");
   if (!input.unscheduled && (!input.startDate || !input.endDate)) {
     throw new Error("Dates required");
+  }
+
+  let outputUrl: string | null = null;
+  try {
+    outputUrl = normalizeOutputUrl(input.outputUrl);
+  } catch (e) {
+    throw e instanceof Error ? e : new Error("Invalid output URL");
   }
 
   let taskId = input.id;
@@ -373,6 +383,8 @@ export async function upsertTask(input: {
     startDate: input.unscheduled ? null : input.startDate || null,
     endDate: input.unscheduled ? null : input.endDate || null,
     unscheduled: !!input.unscheduled,
+    doneDate: input.doneDate || null,
+    outputUrl,
     updatedAt: new Date(),
   };
 
@@ -415,9 +427,26 @@ export async function restoreTask(id: string) {
 
 export async function createProjectInline(goalId: string, name: string) {
   const db = await dbReady();
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Project name required");
+  if (!goalId) throw new Error("Goal required");
+
+  const existing = await db
+    .select()
+    .from(schema.projects)
+    .where(
+      and(
+        eq(schema.projects.goalId, goalId),
+        isNull(schema.projects.deletedAt),
+        sql`lower(${schema.projects.name}) = lower(${trimmed})`,
+      ),
+    )
+    .limit(1);
+  if (existing[0]) throw new Error("A project with that name already exists");
+
   const [p] = await db
     .insert(schema.projects)
-    .values({ goalId, name: name.trim() })
+    .values({ goalId, name: trimmed })
     .returning();
   revalidateAll();
   return p;

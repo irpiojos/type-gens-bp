@@ -100,6 +100,8 @@ export const tasks = pgTable("tasks", {
   startDate: date("start_date"),
   endDate: date("end_date"),
   unscheduled: boolean("unscheduled").notNull().default(false),
+  doneDate: date("done_date"),
+  outputUrl: text("output_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),

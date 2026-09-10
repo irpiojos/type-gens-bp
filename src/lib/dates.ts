@@ -56,6 +56,12 @@ export function formatMonthDay(date: Date | string): string {
   return format(d, "MMMM d");
 }
 
+/** Short month for tooltips, e.g. "Sep 4". */
+export function formatShortMonthDay(date: Date | string): string {
+  const d = typeof date === "string" ? parseISO(date) : date;
+  return format(d, "MMM d");
+}
+
 export function toISODate(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
