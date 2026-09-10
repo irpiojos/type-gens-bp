@@ -16,8 +16,10 @@ import {
   weekWorkdays,
 } from "@/lib/dates";
 import type { getWeekPageData } from "@/lib/queries";
+import { layoutSpanningTasks } from "@/lib/week-layout";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import clsx from "clsx";
 
 type Data = NonNullable<Awaited<ReturnType<typeof getWeekPageData>>>;
 
@@ -68,6 +70,12 @@ export function WeekView({ data }: { data: Data }) {
       if (t.startDate === t.endDate) return false;
       return t.startDate <= wEnd && t.endDate >= wStart;
     });
+  }
+
+  function spanningLayout(week: number) {
+    const days = weekWorkdays(data.year.yearNumber, week);
+    const dayISOs = days.map((d) => toISODate(d));
+    return layoutSpanningTasks(spanningTasks(week), dayISOs);
   }
 
   function beginSelect(iso: string, week: number) {
@@ -156,7 +164,56 @@ export function WeekView({ data }: { data: Data }) {
               </p>
             ) : null}
 
-            <div className="week-days-grid overflow-x-auto">
+            <div className="week-block-grid overflow-x-auto">
+              {/* Day headers */}
+              {block.days.map((day) => {
+                const iso = toISODate(day);
+                return (
+                  <div key={`h-${iso}`} className="week-day-header">
+                    {formatDayHeader(day)}
+                  </div>
+                );
+              })}
+
+              {/* Multi-day band — bars sit over column dividers */}
+              {(() => {
+                const { items, laneCount } = spanningLayout(block.week);
+                if (!laneCount) return null;
+                return (
+                  <div
+                    className="week-multiday-band"
+                    style={{
+                      gridColumn: "1 / -1",
+                      gridTemplateRows: `repeat(${laneCount}, auto)`,
+                    }}
+                  >
+                    {items.map((item) => (
+                      <div
+                        key={item.task.id}
+                        className={clsx(
+                          "week-multiday-bar",
+                          item.continuesBefore && "continues-before",
+                          item.continuesAfter && "continues-after",
+                        )}
+                        style={{
+                          gridColumn: `${item.startCol + 1} / span ${item.span}`,
+                          gridRow: item.lane + 1,
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                      >
+                        <TaskChip
+                          spanning
+                          task={item.task}
+                          onClick={() => openEdit(item.task)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Day columns — single-day chips only */}
               {block.days.map((day) => {
                 const iso = toISODate(day);
                 const dayTasks = tasksForDay(iso).filter((t) => t.startDate === t.endDate);
@@ -194,8 +251,7 @@ export function WeekView({ data }: { data: Data }) {
                     }}
                     data-day={iso}
                   >
-                    <div className="mb-2 text-sm text-ink/70">{formatDayHeader(day)}</div>
-                    <div className="space-y-1.5">
+                    <div className="week-day-body">
                       {dayTasks.map((t) => (
                         <div
                           key={t.id}
@@ -224,30 +280,6 @@ export function WeekView({ data }: { data: Data }) {
                           + Task
                         </button>
                       ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* continuous multi-day bars */}
-            <div className="mt-2 space-y-1">
-              {spanningTasks(block.week).map((t) => {
-                const days = block.days;
-                const idxs = days
-                  .map((d, i) => ({ i, iso: toISODate(d) }))
-                  .filter(({ iso }) => t.startDate! <= iso && t.endDate! >= iso);
-                if (!idxs.length) return null;
-                const start = idxs[0].i;
-                const span = idxs.length;
-                return (
-                  <div key={t.id} className="week-days-grid">
-                    <div
-                      style={{ gridColumn: `${start + 1} / span ${span}` }}
-                      className="min-w-0 px-1"
-                      onMouseDown={(e) => e.stopPropagation()}
-                    >
-                      <TaskChip spanning task={t} onClick={() => openEdit(t)} />
                     </div>
                   </div>
                 );
