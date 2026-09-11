@@ -2,10 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { AppNav, MetaStack } from "@/components/layout/app-nav";
-import { TaskChip } from "@/components/task/task-chip";
+import {
+  TaskChip,
+  type TaskDragPayload,
+  isSingleDayOrUnscheduled,
+} from "@/components/task/task-chip";
 import { TaskModal, type TaskModalPrefill } from "@/components/task/task-modal";
 import { MemberAvatar } from "@/components/ui/member-avatar";
-import { saveCheckIn } from "@/lib/actions";
+import { rescheduleTask, saveCheckIn } from "@/lib/actions";
 import {
   addWeekClamped,
   contextMeta,
@@ -35,6 +39,10 @@ export function WeekView({ data }: { data: Data }) {
   const [dragRange, setDragRange] = useState<{ start: string; end: string } | null>(null);
   const longPress = useRef<number | null>(null);
   const [, startTx] = useTransition();
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [overrides, setOverrides] = useState<
+    Record<string, { unscheduled: boolean; startDate: string | null; endDate: string | null }>
+  >({});
 
   const weekBlocks = useMemo(() => {
     return data.weeks.map((w) => ({
@@ -42,6 +50,93 @@ export function WeekView({ data }: { data: Data }) {
       days: weekWorkdays(data.year.yearNumber, w),
     }));
   }, [data.weeks, data.year.yearNumber]);
+
+  const weekTasks = useMemo(() => {
+    return data.weekTasks.map((t) => {
+      const o = overrides[t.id];
+      return o ? { ...t, ...o } : t;
+    });
+  }, [data.weekTasks, overrides]);
+
+  const unscheduledTasks = useMemo(() => {
+    const byId = new Map<string, (typeof weekTasks)[number]>();
+    for (const t of data.unscheduled) {
+      const o = overrides[t.id];
+      byId.set(t.id, o ? { ...t, ...o } : t);
+    }
+    for (const t of weekTasks) {
+      if (t.unscheduled) byId.set(t.id, t);
+    }
+    return [...byId.values()].filter((t) => t.unscheduled);
+  }, [data.unscheduled, weekTasks, overrides]);
+
+  function readDrag(e: React.DragEvent): TaskDragPayload | null {
+    const raw =
+      e.dataTransfer.getData("application/x-ttm-task") ||
+      e.dataTransfer.getData("text/plain");
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as TaskDragPayload;
+      if (parsed?.taskId && parsed?.source) return parsed;
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  function applyDrop(
+    payload: TaskDragPayload,
+    target: { kind: "day"; date: string } | { kind: "unscheduled" } | { kind: "member" },
+  ) {
+    // Spec: no member-list ↔ day-column drag
+    if (payload.source === "member" && target.kind === "day") return;
+    if (payload.source === "day" && target.kind === "member") return;
+
+    const all = [...data.weekTasks, ...data.unscheduled];
+    const base = all.find((t) => t.id === payload.taskId);
+    if (!base) return;
+    const task = overrides[base.id] ? { ...base, ...overrides[base.id] } : base;
+    if (!isSingleDayOrUnscheduled(task)) return;
+
+    let next: { unscheduled: boolean; startDate: string | null; endDate: string | null };
+    if (target.kind === "unscheduled") {
+      next = { unscheduled: true, startDate: null, endDate: null };
+    } else if (target.kind === "day") {
+      next = { unscheduled: false, startDate: target.date, endDate: target.date };
+    } else {
+      // unscheduled → member list: stay unscheduled (assignees unchanged)
+      next = { unscheduled: true, startDate: null, endDate: null };
+    }
+
+    if (
+      !!task.unscheduled === next.unscheduled &&
+      task.startDate === next.startDate &&
+      task.endDate === next.endDate
+    ) {
+      return;
+    }
+
+    const prev = overrides[task.id];
+    setOverrides((o) => ({ ...o, [task.id]: next }));
+    startTx(async () => {
+      try {
+        await rescheduleTask({
+          id: task.id,
+          unscheduled: next.unscheduled,
+          startDate: next.startDate,
+          endDate: next.endDate,
+        });
+        router.refresh();
+      } catch {
+        setOverrides((o) => {
+          const copy = { ...o };
+          if (prev) copy[task.id] = prev;
+          else delete copy[task.id];
+          return copy;
+        });
+      }
+    });
+  }
 
   function openNew(p: TaskModalPrefill) {
     setEditingTask(null);
@@ -56,7 +151,7 @@ export function WeekView({ data }: { data: Data }) {
   }
 
   function tasksForDay(iso: string) {
-    return data.weekTasks
+    return weekTasks
       .filter(
         (t) => !t.unscheduled && t.startDate && t.endDate && t.startDate <= iso && t.endDate >= iso,
       )
@@ -73,7 +168,7 @@ export function WeekView({ data }: { data: Data }) {
     const days = weekWorkdays(data.year.yearNumber, week);
     const wStart = toISODate(days[0]);
     const wEnd = toISODate(days[4]);
-    return data.weekTasks.filter((t) => {
+    return weekTasks.filter((t) => {
       if (t.unscheduled || !t.startDate || !t.endDate) return false;
       if (t.startDate === t.endDate) return false;
       return t.startDate <= wEnd && t.endDate >= wStart;
@@ -230,7 +325,10 @@ export function WeekView({ data }: { data: Data }) {
                 return (
                   <div
                     key={iso}
-                    className="week-day-col"
+                    className={clsx(
+                      "week-day-col",
+                      dropTarget === `day:${iso}` && "drop-target-active",
+                    )}
                     onMouseEnter={() => {
                       setHoverDay(iso);
                       moveSelect(iso);
@@ -238,6 +336,22 @@ export function WeekView({ data }: { data: Data }) {
                     onMouseLeave={() => setHoverDay((h) => (h === iso ? null : h))}
                     onMouseDown={() => beginSelect(iso, block.week)}
                     onMouseUp={endSelect}
+                    onDragOver={(e) => {
+                      const p = readDrag(e);
+                      if (!p || p.source === "member") return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      setDropTarget(`day:${iso}`);
+                    }}
+                    onDragLeave={() =>
+                      setDropTarget((d) => (d === `day:${iso}` ? null : d))
+                    }
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDropTarget(null);
+                      const p = readDrag(e);
+                      if (p) applyDrop(p, { kind: "day", date: iso });
+                    }}
                     onTouchStart={() => {
                       longPress.current = window.setTimeout(
                         () => beginSelect(iso, block.week),
@@ -266,7 +380,11 @@ export function WeekView({ data }: { data: Data }) {
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
                         >
-                          <TaskChip task={t} onClick={() => openEdit(t)} />
+                          <TaskChip
+                            task={t}
+                            dragSource="day"
+                            onClick={() => openEdit(t)}
+                          />
                         </div>
                       ))}
                       {inDrag ? (
@@ -302,7 +420,7 @@ export function WeekView({ data }: { data: Data }) {
         <div className="checkin-panel">
           {data.members.map((m) => {
             const ci = data.checkIns.find((c) => c.memberId === m.id);
-            const memberTasks = data.weekTasks
+            const memberTasks = weekTasks
               .filter((t) => t.assignees.some((a) => a.id === m.id))
               .sort(ranaFirst);
             const driveOn = !!ci?.driveScreenshot;
@@ -349,9 +467,37 @@ export function WeekView({ data }: { data: Data }) {
                     }
                   />
                 </div>
-                <div className="mt-3 min-h-[80px] space-y-1.5">
+                <div
+                  className={clsx(
+                    "mt-3 min-h-[80px] space-y-1.5 rounded-sm",
+                    dropTarget === `member:${m.id}` && "drop-target-active",
+                  )}
+                  onDragOver={(e) => {
+                    const p = readDrag(e);
+                    // Only accept from unscheduled (not from day)
+                    if (!p || p.source === "day") return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    setDropTarget(`member:${m.id}`);
+                  }}
+                  onDragLeave={() =>
+                    setDropTarget((d) => (d === `member:${m.id}` ? null : d))
+                  }
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDropTarget(null);
+                    const p = readDrag(e);
+                    if (p) applyDrop(p, { kind: "member" });
+                  }}
+                >
                   {memberTasks.map((t) => (
-                    <TaskChip key={t.id} task={t} compact onClick={() => openEdit(t)} />
+                    <TaskChip
+                      key={t.id}
+                      task={t}
+                      compact
+                      dragSource="member"
+                      onClick={() => openEdit(t)}
+                    />
                   ))}
                   <button
                     type="button"
@@ -377,9 +523,35 @@ export function WeekView({ data }: { data: Data }) {
 
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-light">Unscheduled tasks</h2>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {data.unscheduled.map((t) => (
-            <TaskChip key={t.id} task={t} onClick={() => openEdit(t)} />
+        <div
+          className={clsx(
+            "grid gap-2 rounded-sm sm:grid-cols-3",
+            dropTarget === "unscheduled" && "drop-target-active",
+          )}
+          onDragOver={(e) => {
+            const p = readDrag(e);
+            if (!p) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            setDropTarget("unscheduled");
+          }}
+          onDragLeave={() =>
+            setDropTarget((d) => (d === "unscheduled" ? null : d))
+          }
+          onDrop={(e) => {
+            e.preventDefault();
+            setDropTarget(null);
+            const p = readDrag(e);
+            if (p) applyDrop(p, { kind: "unscheduled" });
+          }}
+        >
+          {unscheduledTasks.map((t) => (
+            <TaskChip
+              key={t.id}
+              task={t}
+              dragSource="unscheduled"
+              onClick={() => openEdit(t)}
+            />
           ))}
           <button
             type="button"

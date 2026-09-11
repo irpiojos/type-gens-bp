@@ -6,6 +6,23 @@ import { ExternalLink } from "lucide-react";
 import { statusEmoji, statusLabel } from "@/lib/constants";
 import type { TaskWithRelations } from "@/lib/queries";
 import { formatMonthDay, formatShortMonthDay } from "@/lib/dates";
+import { useRef } from "react";
+
+export type TaskDragSource = "day" | "member" | "unscheduled";
+
+export type TaskDragPayload = {
+  taskId: string;
+  source: TaskDragSource;
+};
+
+export function isSingleDayOrUnscheduled(task: {
+  unscheduled: boolean;
+  startDate: string | null;
+  endDate: string | null;
+}) {
+  if (task.unscheduled) return true;
+  return !!(task.startDate && task.endDate && task.startDate === task.endDate);
+}
 
 export function TaskChip({
   task,
@@ -14,6 +31,7 @@ export function TaskChip({
   className,
   style,
   spanning,
+  dragSource,
 }: {
   task: TaskWithRelations;
   onClick?: () => void;
@@ -21,6 +39,8 @@ export function TaskChip({
   className?: string;
   style?: React.CSSProperties;
   spanning?: boolean;
+  /** When set, chip is draggable (single-day / unscheduled only). */
+  dragSource?: TaskDragSource;
 }) {
   const letter = task.goal?.letterCode ?? "?";
   const emoji = statusEmoji(task.status);
@@ -46,6 +66,9 @@ export function TaskChip({
     .filter(Boolean)
     .join("\n");
 
+  const canDrag = !!dragSource && !spanning && isSingleDayOrUnscheduled(task);
+  const didDrag = useRef(false);
+
   return (
     <Tooltip.Provider delayDuration={250}>
       <Tooltip.Root>
@@ -54,13 +77,32 @@ export function TaskChip({
             className={clsx(
               "task-chip-wrap",
               spanning && "task-chip-wrap-spanning",
+              canDrag && "task-chip-draggable",
               className,
             )}
             style={style}
+            draggable={canDrag}
+            onDragStart={(e) => {
+              if (!canDrag || !dragSource) return;
+              didDrag.current = true;
+              const payload: TaskDragPayload = { taskId: task.id, source: dragSource };
+              e.dataTransfer.setData("application/x-ttm-task", JSON.stringify(payload));
+              e.dataTransfer.setData("text/plain", JSON.stringify(payload));
+              e.dataTransfer.effectAllowed = "move";
+              e.stopPropagation();
+            }}
+            onDragEnd={() => {
+              window.setTimeout(() => {
+                didDrag.current = false;
+              }, 0);
+            }}
           >
             <button
               type="button"
-              onClick={onClick}
+              onClick={() => {
+                if (didDrag.current) return;
+                onClick?.();
+              }}
               title={doneTip ?? undefined}
               className={clsx(
                 "task-chip text-left",
@@ -85,6 +127,7 @@ export function TaskChip({
                 aria-label="Open output URL"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
+                draggable={false}
               >
                 <ExternalLink size={12} strokeWidth={2.25} />
               </a>

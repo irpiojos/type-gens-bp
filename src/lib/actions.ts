@@ -406,6 +406,50 @@ export async function upsertTask(input: {
   return taskId!;
 }
 
+/** Move a single-day or unscheduled chip — dates only; assignees untouched. */
+export async function rescheduleTask(input: {
+  id: string;
+  unscheduled: boolean;
+  startDate?: string | null;
+  endDate?: string | null;
+}) {
+  const db = await dbReady();
+  if (!input.unscheduled && (!input.startDate || !input.endDate)) {
+    throw new Error("Dates required");
+  }
+  if (!input.unscheduled && input.startDate !== input.endDate) {
+    throw new Error("Drag only supports single-day targets");
+  }
+
+  const [existing] = await db
+    .select()
+    .from(schema.tasks)
+    .where(and(eq(schema.tasks.id, input.id), isNull(schema.tasks.deletedAt)))
+    .limit(1);
+  if (!existing) throw new Error("Task not found");
+  if (
+    !existing.unscheduled &&
+    existing.startDate &&
+    existing.endDate &&
+    existing.startDate !== existing.endDate
+  ) {
+    throw new Error("Multi-day tasks cannot be dragged");
+  }
+
+  await db
+    .update(schema.tasks)
+    .set({
+      unscheduled: !!input.unscheduled,
+      startDate: input.unscheduled ? null : input.startDate || null,
+      endDate: input.unscheduled ? null : input.endDate || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.tasks.id, input.id));
+
+  revalidateAll();
+  return { ok: true as const };
+}
+
 export async function deleteTask(id: string) {
   const db = await dbReady();
   await db
