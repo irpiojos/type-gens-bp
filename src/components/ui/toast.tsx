@@ -10,7 +10,7 @@ import {
 } from "react";
 import { restoreEntity } from "@/lib/actions";
 
-type UndoKind = "task" | "goal" | "member" | "holiday" | "comment";
+type UndoKind = "task" | "goal" | "member" | "holiday" | "comment" | "recap";
 
 type Toast = {
   id: string;

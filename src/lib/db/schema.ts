@@ -152,6 +152,22 @@ export const datedComments = pgTable("dated_comments", {
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
+/** Agency-wide townhall recap entries — independent of Historian tasks/projects. */
+export const recapProjects = pgTable("recap_projects", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  yearId: uuid("year_id")
+    .notNull()
+    .references(() => years.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  team: text("team").notNull().default(""),
+  outputUrls: text("output_urls").array().notNull().default([]),
+  readiness: integer("readiness"),
+  notes: text("notes").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
+
 export type Member = typeof members.$inferSelect;
 export type Year = typeof years.$inferSelect;
 export type Goal = typeof goals.$inferSelect;
@@ -160,3 +176,4 @@ export type Holiday = typeof holidays.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type CheckIn = typeof checkIns.$inferSelect;
 export type DatedComment = typeof datedComments.$inferSelect;
+export type RecapProject = typeof recapProjects.$inferSelect;

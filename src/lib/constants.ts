@@ -37,6 +37,23 @@ export const GOAL_STATUSES = [
 
 export type GoalStatus = (typeof GOAL_STATUSES)[number]["value"];
 
+/** Recap readiness — material readiness for the edit, not project quality. */
+export const RECAP_READINESS = [
+  { value: 0, label: "Not for this recap" },
+  { value: 1, label: "Needs visual rework" },
+  { value: 2, label: "Minor adjustments" },
+  { value: 3, label: "Ready as-is" },
+] as const;
+
+export type RecapReadiness = (typeof RECAP_READINESS)[number]["value"];
+
+export function recapReadinessLabel(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  const hit = RECAP_READINESS.find((r) => r.value === value);
+  return hit ? `${hit.value} · ${hit.label}` : "—";
+}
+
+
 export const COMMENT_COLORS = [
   "#FDE047", // yellow (Pitches Season example)
   "#BFDBFE", // light blue

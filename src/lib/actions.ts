@@ -626,25 +626,100 @@ export async function changePassword(
   }
 }
 
+
+/* ---------------- Recap projects ---------------- */
+
+export async function upsertRecapProject(input: {
+  id?: string;
+  yearId: string;
+  name: string;
+  team?: string;
+  outputUrls?: string[];
+  readiness?: number | null;
+  notes?: string;
+}) {
+  const db = await dbReady();
+  const name = input.name.trim();
+  if (!name) throw new Error("Project name required");
+
+  const readiness =
+    input.readiness === null || input.readiness === undefined || input.readiness === ("" as never)
+      ? null
+      : Number(input.readiness);
+  if (readiness !== null && ![0, 1, 2, 3].includes(readiness)) {
+    throw new Error("Invalid readiness");
+  }
+
+  const urls: string[] = [];
+  for (const raw of input.outputUrls ?? []) {
+    const n = normalizeOutputUrl(raw);
+    if (n) urls.push(n);
+  }
+
+  const payload = {
+    yearId: input.yearId,
+    name,
+    team: (input.team ?? "").trim(),
+    outputUrls: urls,
+    readiness,
+    notes: (input.notes ?? "").trim(),
+    updatedAt: new Date(),
+  };
+
+  if (input.id) {
+    await db
+      .update(schema.recapProjects)
+      .set(payload)
+      .where(eq(schema.recapProjects.id, input.id));
+    revalidateAll();
+    return input.id;
+  }
+
+  const [row] = await db.insert(schema.recapProjects).values(payload).returning();
+  revalidateAll();
+  return row.id;
+}
+
+export async function deleteRecapProject(id: string) {
+  const db = await dbReady();
+  await db
+    .update(schema.recapProjects)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(eq(schema.recapProjects.id, id));
+  revalidateAll();
+  return { ok: true as const };
+}
+
+export async function restoreRecapProject(id: string) {
+  const db = await dbReady();
+  await db
+    .update(schema.recapProjects)
+    .set({ deletedAt: null, updatedAt: new Date() })
+    .where(eq(schema.recapProjects.id, id));
+  revalidateAll();
+}
+
 export async function softDeleteEntity(
-  kind: "task" | "goal" | "member" | "holiday" | "comment",
+  kind: "task" | "goal" | "member" | "holiday" | "comment" | "recap",
   id: string,
 ) {
   if (kind === "task") return deleteTask(id);
   if (kind === "goal") return deleteGoal(id);
   if (kind === "member") return deleteMember(id);
   if (kind === "holiday") return deleteHoliday(id);
+  if (kind === "recap") return deleteRecapProject(id);
   return deleteDatedComment(id);
 }
 
 export async function restoreEntity(
-  kind: "task" | "goal" | "member" | "holiday" | "comment",
+  kind: "task" | "goal" | "member" | "holiday" | "comment" | "recap",
   id: string,
 ) {
   if (kind === "task") return restoreTask(id);
   if (kind === "goal") return restoreGoal(id);
   if (kind === "member") return restoreMember(id);
   if (kind === "holiday") return restoreHoliday(id);
+  if (kind === "recap") return restoreRecapProject(id);
   return restoreDatedComment(id);
 }
 

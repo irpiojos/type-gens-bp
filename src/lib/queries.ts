@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql, inArray, asc } from "drizzle-orm";
+import { and, eq, isNull, sql, inArray, asc, desc } from "drizzle-orm";
 import { getDb, schema, withDbRetry } from "@/lib/db";
 import { bootstrapApp, getActiveYear } from "@/lib/db/bootstrap";
 import { taskTouchesWeek, toISODate } from "@/lib/dates";
@@ -307,5 +307,28 @@ export async function getTaskModalOptions(yearId: string) {
         .where(and(eq(schema.members.active, true), isNull(schema.members.deletedAt)));
     }
     return { goals, projects, members };
+  });
+}
+
+export async function getRecapPageData(yearNumber?: number) {
+  return withDbRetry(async () => {
+    await bootstrapApp();
+    const year = await getActiveYear(yearNumber);
+    if (!year) return null;
+    const db = getDb();
+
+    const projects = await db
+      .select()
+      .from(schema.recapProjects)
+      .where(and(eq(schema.recapProjects.yearId, year.id), isNull(schema.recapProjects.deletedAt)))
+      .orderBy(desc(schema.recapProjects.createdAt));
+
+    const years = await db
+      .select()
+      .from(schema.years)
+      .where(isNull(schema.years.deletedAt))
+      .orderBy(asc(schema.years.yearNumber));
+
+    return { year, projects, years };
   });
 }

@@ -123,6 +123,19 @@ CREATE TABLE IF NOT EXISTS dated_comments (
   created_at timestamptz NOT NULL DEFAULT now(),
   deleted_at timestamptz
 );
+CREATE TABLE IF NOT EXISTS recap_projects (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  year_id uuid NOT NULL REFERENCES years(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  team text NOT NULL DEFAULT '',
+  output_urls text[] NOT NULL DEFAULT '{}',
+  readiness integer,
+  notes text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  deleted_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS recap_projects_year_idx ON recap_projects(year_id) WHERE deleted_at IS NULL;
 `;
 
 function isConnectionError(err: unknown): boolean {

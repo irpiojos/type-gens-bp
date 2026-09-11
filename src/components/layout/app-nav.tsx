@@ -17,6 +17,7 @@ export function AppNav({
 }) {
   const pathname = usePathname();
   const isGoals = pathname.startsWith("/goals");
+  const isRecap = pathname.startsWith("/recap");
   const isYear = pathname.startsWith("/year") && !pathname.includes("year-scroll");
   const isScroll = pathname.startsWith("/year-scroll");
   const isWeek = pathname === "/" || pathname.startsWith("/week");
@@ -25,7 +26,7 @@ export function AppNav({
     <header className="mb-3 flex flex-col gap-3 sm:mb-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 text-sm text-ink/70">
-          {isGoals ? null : (
+          {isGoals || isRecap ? null : (
             <p>
               {yearNumber} The Year Of{" "}
               <Link
@@ -58,6 +59,12 @@ export function AppNav({
             className={clsx("btn-nav text-xs", isYear && "is-selected")}
           >
             Year View
+          </Link>
+          <Link
+            href={`/recap?year=${yearNumber}`}
+            className={clsx("btn-nav text-xs", isRecap && "is-selected")}
+          >
+            Recap
           </Link>
           <Link
             href={`/goals?year=${yearNumber}`}
