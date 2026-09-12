@@ -148,8 +148,10 @@ export function TaskModal({
 
   function onStatusChange(next: string) {
     setStatus(next);
-    if (next === "done" && !doneDate) {
-      setDoneDate(todayISO());
+    if (next === "done") {
+      if (!doneDate) setDoneDate(todayISO());
+    } else {
+      setDoneDate("");
     }
   }
 

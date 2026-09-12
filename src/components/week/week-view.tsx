@@ -11,6 +11,10 @@ import { TaskModal, type TaskModalPrefill } from "@/components/task/task-modal";
 import { MemberAvatar } from "@/components/ui/member-avatar";
 import { rescheduleTask, saveCheckIn } from "@/lib/actions";
 import {
+  dragTypesIncludeTask,
+  getActiveTaskDrag,
+} from "@/lib/task-drag";
+import {
   addWeekClamped,
   contextMeta,
   formatDayHeader,
@@ -74,14 +78,32 @@ export function WeekView({ data }: { data: Data }) {
     const raw =
       e.dataTransfer.getData("application/x-ttm-task") ||
       e.dataTransfer.getData("text/plain");
-    if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw) as TaskDragPayload;
-      if (parsed?.taskId && parsed?.source) return parsed;
-    } catch {
-      return null;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as TaskDragPayload;
+        if (parsed?.taskId && parsed?.source) return parsed;
+      } catch {
+        /* fall through to active drag */
+      }
     }
-    return null;
+    // dragover cannot read getData() in browsers — use session active drag
+    return getActiveTaskDrag();
+  }
+
+  /** Accept drop targets without reading payload (getData empty on dragover). */
+  function canAcceptDrag(
+    e: React.DragEvent,
+    rejectSource?: TaskDragPayload["source"],
+  ) {
+    if (!dragTypesIncludeTask(e.dataTransfer.types)) return false;
+    const active = getActiveTaskDrag();
+    if (rejectSource && active?.source === rejectSource) return false;
+    // If marker types are present, prefer them when active is missing
+    if (rejectSource) {
+      const types = Array.from(e.dataTransfer.types);
+      if (types.includes(`application/x-ttm-from-${rejectSource}`)) return false;
+    }
+    return true;
   }
 
   function applyDrop(
@@ -290,6 +312,11 @@ export function WeekView({ data }: { data: Data }) {
                       gridTemplateRows: `repeat(${laneCount}, auto)`,
                     }}
                   >
+                    <div className="week-multiday-lines" aria-hidden>
+                      {block.days.map((day) => (
+                        <span key={`line-${toISODate(day)}`} />
+                      ))}
+                    </div>
                     {items.map((item) => (
                       <div
                         key={item.task.id}
@@ -337,8 +364,8 @@ export function WeekView({ data }: { data: Data }) {
                     onMouseDown={() => beginSelect(iso, block.week)}
                     onMouseUp={endSelect}
                     onDragOver={(e) => {
-                      const p = readDrag(e);
-                      if (!p || p.source === "member") return;
+                      // getData() is empty during dragover — use types + active drag
+                      if (!canAcceptDrag(e, "member")) return;
                       e.preventDefault();
                       e.dataTransfer.dropEffect = "move";
                       setDropTarget(`day:${iso}`);
@@ -473,9 +500,8 @@ export function WeekView({ data }: { data: Data }) {
                     dropTarget === `member:${m.id}` && "drop-target-active",
                   )}
                   onDragOver={(e) => {
-                    const p = readDrag(e);
                     // Only accept from unscheduled (not from day)
-                    if (!p || p.source === "day") return;
+                    if (!canAcceptDrag(e, "day")) return;
                     e.preventDefault();
                     e.dataTransfer.dropEffect = "move";
                     setDropTarget(`member:${m.id}`);
@@ -529,8 +555,7 @@ export function WeekView({ data }: { data: Data }) {
             dropTarget === "unscheduled" && "drop-target-active",
           )}
           onDragOver={(e) => {
-            const p = readDrag(e);
-            if (!p) return;
+            if (!canAcceptDrag(e)) return;
             e.preventDefault();
             e.dataTransfer.dropEffect = "move";
             setDropTarget("unscheduled");

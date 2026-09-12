@@ -189,7 +189,7 @@ export function RecapModal({
             </button>
             <button
               type="button"
-              className="btn-outline is-selected text-sm"
+              className="btn-outline text-sm"
               onClick={onSave}
               disabled={pending || !name.trim()}
             >

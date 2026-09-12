@@ -13,9 +13,14 @@ export type SpanningLaneItem = {
   lane: number;
 };
 
+function isRana(status: string | null | undefined) {
+  return status === "rana";
+}
+
 /**
  * Pack multi-day tasks into non-overlapping lanes for a calendar-style band.
- * Longer / earlier tasks take the top lanes.
+ * Rana (🐸) tasks always occupy the top lanes; other statuses pack below.
+ * Within each group: earlier start, then longer span.
  */
 export function layoutSpanningTasks(
   tasks: TaskWithRelations[],
@@ -44,32 +49,49 @@ export function layoutSpanningTasks(
         continuesAfter: task.endDate! > wEnd,
         endCol: startCol + span - 1,
       };
-    })
-    .sort((a, b) => {
-      if (a.startCol !== b.startCol) return a.startCol - b.startCol;
-      return b.span - a.span;
     });
 
-  const laneEnds: number[] = []; // last endCol occupied per lane
+  const byGeometry = (
+    a: (typeof candidates)[number],
+    b: (typeof candidates)[number],
+  ) => {
+    if (a.startCol !== b.startCol) return a.startCol - b.startCol;
+    return b.span - a.span;
+  };
+
+  const ranaFirst = [...candidates].filter((c) => isRana(c.task.status)).sort(byGeometry);
+  const rest = [...candidates].filter((c) => !isRana(c.task.status)).sort(byGeometry);
+
+  const laneEnds: number[] = [];
   const items: SpanningLaneItem[] = [];
 
-  for (const c of candidates) {
-    let lane = laneEnds.findIndex((end) => end < c.startCol);
-    if (lane === -1) {
-      lane = laneEnds.length;
-      laneEnds.push(c.endCol);
-    } else {
-      laneEnds[lane] = c.endCol;
+  function pack(list: typeof candidates, laneOffset: number) {
+    const localEnds: number[] = [];
+    for (const c of list) {
+      let local = localEnds.findIndex((end) => end < c.startCol);
+      if (local === -1) {
+        local = localEnds.length;
+        localEnds.push(c.endCol);
+      } else {
+        localEnds[local] = c.endCol;
+      }
+      const lane = laneOffset + local;
+      while (laneEnds.length <= lane) laneEnds.push(-1);
+      laneEnds[lane] = Math.max(laneEnds[lane], c.endCol);
+      items.push({
+        task: c.task,
+        startCol: c.startCol,
+        span: c.span,
+        continuesBefore: c.continuesBefore,
+        continuesAfter: c.continuesAfter,
+        lane,
+      });
     }
-    items.push({
-      task: c.task,
-      startCol: c.startCol,
-      span: c.span,
-      continuesBefore: c.continuesBefore,
-      continuesAfter: c.continuesAfter,
-      lane,
-    });
+    return localEnds.length;
   }
+
+  const ranaLanes = pack(ranaFirst, 0);
+  pack(rest, ranaLanes);
 
   return { items, laneCount: laneEnds.length };
 }
