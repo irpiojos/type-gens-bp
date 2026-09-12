@@ -290,6 +290,11 @@ export function WeekView({ data }: { data: Data }) {
                       gridTemplateRows: `repeat(${laneCount}, auto)`,
                     }}
                   >
+                    <div className="week-multiday-lines" aria-hidden>
+                      {block.days.map((day) => (
+                        <span key={`line-${toISODate(day)}`} />
+                      ))}
+                    </div>
                     {items.map((item) => (
                       <div
                         key={item.task.id}

@@ -69,10 +69,19 @@ export function TaskChip({
   const canDrag = !!dragSource && !spanning && isSingleDayOrUnscheduled(task);
   const didDrag = useRef(false);
 
+  function activate() {
+    if (didDrag.current) return;
+    onClick?.();
+  }
+
   return (
     <Tooltip.Provider delayDuration={250}>
       <Tooltip.Root>
         <Tooltip.Trigger asChild>
+          {/*
+            Native HTML5 drag fails when the gesture starts on a nested <button>.
+            Keep a single draggable host that also handles open-on-click.
+          */}
           <span
             className={clsx(
               "task-chip-wrap",
@@ -82,8 +91,35 @@ export function TaskChip({
             )}
             style={style}
             draggable={canDrag}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            title={doneTip ?? undefined}
+            onKeyDown={(e) => {
+              if (!onClick) return;
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                activate();
+              }
+            }}
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest("a.task-chip-link")) return;
+              activate();
+            }}
+            onMouseDown={(e) => {
+              // Don't let day-range select steal the gesture
+              e.stopPropagation();
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+            }}
             onDragStart={(e) => {
-              if (!canDrag || !dragSource) return;
+              if (!canDrag || !dragSource) {
+                e.preventDefault();
+                return;
+              }
               didDrag.current = true;
               const payload: TaskDragPayload = { taskId: task.id, source: dragSource };
               e.dataTransfer.setData("application/x-ttm-task", JSON.stringify(payload));
@@ -97,13 +133,7 @@ export function TaskChip({
               }, 0);
             }}
           >
-            <button
-              type="button"
-              onClick={() => {
-                if (didDrag.current) return;
-                onClick?.();
-              }}
-              title={doneTip ?? undefined}
+            <span
               className={clsx(
                 "task-chip text-left",
                 compact && "task-chip-compact",
@@ -116,7 +146,7 @@ export function TaskChip({
                 <span className="task-chip-dash"> – </span>
               </span>
               <span className="task-chip-title">{task.title}</span>
-            </button>
+            </span>
             {task.outputUrl ? (
               <a
                 href={task.outputUrl}
@@ -127,6 +157,7 @@ export function TaskChip({
                 aria-label="Open output URL"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 draggable={false}
               >
                 <ExternalLink size={12} strokeWidth={2.25} />

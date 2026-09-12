@@ -24,8 +24,8 @@ export function AppNav({
 
   return (
     <header className="mb-3 flex flex-col gap-3 sm:mb-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 text-sm text-ink/70">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0 self-start text-sm text-ink/70">
           {isGoals || isRecap ? null : (
             <p>
               {yearNumber} The Year Of{" "}
@@ -39,7 +39,7 @@ export function AppNav({
             </p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-end gap-2">
           {isYear ? (
             <Link
               href={`/year-scroll?year=${yearNumber}`}

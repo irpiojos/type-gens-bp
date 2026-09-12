@@ -107,7 +107,8 @@ b,
   border-color: rgba(0, 0, 0, 0.45);
 }
 
-/* Hard offset shadow — bottom by default */
+/* Hard offset shadow — raised = clickable; pressed = recessed.
+   Pressed uses translateY(2px) so bottoms align with raised (+ bottom shadow). */
 .btn-outline,
 .btn-nav,
 .btn-warn,
@@ -126,14 +127,15 @@ b,
 .btn-outline:hover,
 .btn-nav:hover,
 .icon-btn:hover {
-  background: rgba(0, 0, 0, 0.03);
+  background: #f7f7f7;
 }
 
 .btn-outline:active,
 .btn-nav:active,
 .icon-btn:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 0 var(--shadow);
+  transform: translateY(2px);
+  box-shadow: 0 -2px #d4d4d4;
+  border-color: #d4d4d4;
 }
 
 .btn-nav.is-selected,
@@ -143,7 +145,7 @@ b,
   border-color: #d4d4d4;
   color: #d4d4d4;
   font-weight: 500;
-  transform: none;
+  transform: translateY(2px);
 }
 
 .btn-outline:disabled,
@@ -261,7 +263,18 @@ b,
 }
 
 .week-panel-edge-btn:hover {
-  background: rgba(0, 0, 0, 0.03);
+  background: #f7f7f7;
+}
+
+.week-panel-edge-btn:active {
+  transform: translateY(calc(-50% + 2px));
+  box-shadow: 0 -2px #d4d4d4;
+  border-color: #d4d4d4;
+  background: #ffffff;
+}
+
+.week-panel-edge-btn.bottom:active {
+  transform: translateY(calc(50% + 2px));
 }
 
 .week-days-grid {
@@ -292,16 +305,36 @@ b,
 }
 
 .week-multiday-band {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   column-gap: 0;
   row-gap: 0.25rem;
-  margin: 0 0 0.35rem;
-  padding: 0 0 0.35rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  margin: 0;
+  padding: 0 0 0.25rem;
+  /* no horizontal divider — day column lines continue behind bars */
+}
+
+/* Vertical day separators behind multiday bars (match .week-day-col) */
+.week-multiday-lines {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.week-multiday-lines > span {
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.week-multiday-lines > span:last-child {
+  border-right: none;
 }
 
 .week-multiday-bar {
+  position: relative;
   min-width: 0;
   padding: 0 1px;
   z-index: 1;
@@ -486,46 +519,54 @@ b,
   font-weight: 300;
 }
 
-/* Drive screenshot compliance toggle — upper-right of avatar block */
+/* Drive screenshot toggle — vertical pill (green on / light off) */
 .drive-shot-toggle {
   position: absolute;
   top: -2px;
-  right: 8px;
+  right: 6px;
   z-index: 2;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  width: 1.85rem;
-  height: 1.05rem;
-  padding: 0 2px;
-  border: 1px solid #d4d4d4;
-  border-radius: 4px;
-  background: #f6f9f4;
-  box-shadow: 0 2px 0 0 #d4d4d4;
+  justify-content: flex-end;
+  width: 0.82rem;
+  height: 1.55rem;
+  padding: 2px;
+  border: 1.5px solid rgba(0, 0, 0, 0.35);
+  border-radius: 999px;
+  background: #ececec;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
   cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .drive-shot-toggle .drive-shot-knob {
   display: block;
-  width: 0.7rem;
-  height: 0.7rem;
-  border: 1px solid #1a1a1a;
-  border-radius: 2px;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
   background: #ffffff;
-  box-shadow: 0 1px 0 0 #1a1a1a;
-  transform: translateX(0);
-  transition: transform 120ms ease;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
 .drive-shot-toggle.is-on {
-  border-color: #1a1a1a;
-  background: #ffffff;
-  box-shadow: 0 -2px 0 0 #d4d4d4;
+  justify-content: flex-start;
+  border-color: #1a8f3c;
+  background: #2fd15a;
+  box-shadow:
+    inset 0 -1px 2px rgba(0, 0, 0, 0.12),
+    0 0 8px rgba(47, 209, 90, 0.65),
+    0 0 2px rgba(47, 209, 90, 0.9);
 }
 
 .drive-shot-toggle.is-on .drive-shot-knob {
-  background: #1a1a1a;
-  transform: translateX(0.7rem);
-  box-shadow: none;
+  background: #ffffff;
+  border-color: #167a34;
+  box-shadow:
+    inset 0 0 0 2px #1a8f3c,
+    0 0 4px rgba(255, 255, 255, 0.5);
 }
 
 .drive-shot-toggle:hover {
@@ -695,9 +736,18 @@ b,
 /* Task drag & drop */
 .task-chip-draggable {
   cursor: grab;
+  -webkit-user-drag: element;
+  user-select: none;
 }
 .task-chip-draggable:active {
   cursor: grabbing;
+}
+.task-chip-draggable .task-chip {
+  pointer-events: none;
+}
+.task-chip-draggable .task-chip-link {
+  pointer-events: auto;
+  cursor: pointer;
 }
 .drop-target-active {
   outline: 2px solid #1a1a1a;

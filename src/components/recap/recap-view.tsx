@@ -89,7 +89,7 @@ export function RecapView({ data, week }: { data: Data; week: number }) {
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          className="btn-nav is-selected inline-flex items-center gap-1 text-sm"
+          className="btn-nav inline-flex items-center gap-1 text-sm"
           onClick={() => {
             setEditing(null);
             setOpen(true);
