@@ -6,14 +6,10 @@ import { ExternalLink } from "lucide-react";
 import { statusEmoji, statusLabel } from "@/lib/constants";
 import type { TaskWithRelations } from "@/lib/queries";
 import { formatMonthDay, formatShortMonthDay } from "@/lib/dates";
+import { setActiveTaskDrag, type TaskDragPayload, type TaskDragSource } from "@/lib/task-drag";
 import { useRef } from "react";
 
-export type TaskDragSource = "day" | "member" | "unscheduled";
-
-export type TaskDragPayload = {
-  taskId: string;
-  source: TaskDragSource;
-};
+export type { TaskDragPayload, TaskDragSource } from "@/lib/task-drag";
 
 export function isSingleDayOrUnscheduled(task: {
   unscheduled: boolean;
@@ -122,12 +118,16 @@ export function TaskChip({
               }
               didDrag.current = true;
               const payload: TaskDragPayload = { taskId: task.id, source: dragSource };
+              setActiveTaskDrag(payload);
               e.dataTransfer.setData("application/x-ttm-task", JSON.stringify(payload));
+              // Marker type readable via dataTransfer.types during dragover (getData is empty then)
+              e.dataTransfer.setData(`application/x-ttm-from-${dragSource}`, "1");
               e.dataTransfer.setData("text/plain", JSON.stringify(payload));
               e.dataTransfer.effectAllowed = "move";
               e.stopPropagation();
             }}
             onDragEnd={() => {
+              setActiveTaskDrag(null);
               window.setTimeout(() => {
                 didDrag.current = false;
               }, 0);
